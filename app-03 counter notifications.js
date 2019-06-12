@@ -2,8 +2,8 @@ const bleno = require("bleno");
 
 console.log("Starting bleno...");
 
-const COUNTER_SERVICE_UUID = "00010000-9FAB-43C8-9231-40F6E305F96D";
-const COUNTER_CHAR_UUID = "00010001-9FAB-43C8-9231-40F6E305F96D";
+const COUNTER_SERVICE_UUID = "00010000-8d54-11e9-b475-0800200c9a66";
+const COUNTER_CHAR_UUID    = "00010001-8d54-11e9-b475-0800200c9a66";
 
 
 class CounterCharacteristic extends bleno.Characteristic {

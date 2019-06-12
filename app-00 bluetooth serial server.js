@@ -1,7 +1,7 @@
 var server = new(require('bluetooth-serial-port')).BluetoothSerialPortServer();
 
 var CHANNEL = 10; // service channel; defaults to 1 if omitted
-var UUID = 'eef4ca20-8d54-11e9-b475-0800200c9a66';
+var UUID = '00000000-8d54-11e9-b475-0800200c9a66';
 
 server.on('data', (buffer) => {
 
