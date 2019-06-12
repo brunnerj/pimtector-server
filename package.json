@@ -4,7 +4,6 @@
   "description": "bluetooth serial server for PIMtector receiver",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
     "test": "echo 'make some tests!'"
   },
   "repository": {
