@@ -1,0 +1,33 @@
+{
+  "name": "pimtector",
+  "version": "1.0.0",
+  "description": "bluetooth serial server for PIMtector receiver",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo 'make some tests!'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brunnerj/pimtector-server.git"
+  },
+  "keywords": [
+    "PIM",
+    "PIMtector",
+    "receiver",
+    "hunting",
+    "protection",
+    "finding"
+  ],
+  "author": "Brunner Technical Services LLC",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/brunnerj/pimtector-server/issues"
+  },
+  "homepage": "https://github.com/brunnerj/pimtector-server#readme",
+  "dependencies": {
+    "@abandonware/bluetooth-hci-socket": "^0.5.3-1",
+    "bleno": "^0.5.0",
+    "bluetooth-serial-port": "^2.2.4"
+  }
+}
