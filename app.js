@@ -3,18 +3,19 @@
 const SERVER_APP_NAME = 'PIMtector';
 
 const bleno = require('bleno');
+const BatteryService = require('./battery-service');
 
 
 // Set up the service classes...
 
 // Battery Service
 // Read only battery level between 0 and 100 percent
-const BatteryService = new (require('./battery-service'))();
+const batteryService = new BatteryService();
 
 
 // Group services and uuid's for easy consumption
-const Services = [ BatteryService ];
-const ServiceUUIDs = [ BatteryService.uuid ];
+const services = [ batteryService ];
+const serviceUUIDs = [ batteryService.uuid ];
 
 
 console.log(`${SERVER_APP_NAME} starting bleno server...`);
@@ -27,7 +28,7 @@ bleno.on('stateChange', state => {
 
 	if (state === 'poweredOn') {
 		
-		bleno.startAdvertising(SERVER_APP_NAME, ServiceUUIDs, err => {
+		bleno.startAdvertising(SERVER_APP_NAME, serviceUUIDs, err => {
 			if (err) console.error(err);
 		});
 
@@ -49,7 +50,7 @@ bleno.on('advertisingStart', err => {
 
 	console.log('Configuring services...');
 	
-	bleno.setServices(Services, err => {
+	bleno.setServices(services, err => {
 		if(err)
 			console.error(err);
 		else
