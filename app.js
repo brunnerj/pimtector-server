@@ -9,7 +9,7 @@ const bleno = require('bleno');
 
 // Battery Service
 // Read only battery level between 0 and 100 percent
-const BatteryService = new require('./battery-service')();
+const BatteryService = new (require('./battery-service'))();
 
 
 // Group services and uuid's for easy consumption
