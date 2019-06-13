@@ -27,7 +27,7 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 
 			console.log(`Returning battery result: ${result}`);
 
-			callback(this.RESULT_SUCCESS, data);
+			callback(this.RESULT_SUCCESS, result);
 
 		} catch (err) {
 
@@ -51,4 +51,4 @@ class BatteryService extends bleno.PrimaryService {
 	}
 }
 
-exports = BatteryService;
+module.exports = BatteryService;
