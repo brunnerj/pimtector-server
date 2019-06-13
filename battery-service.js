@@ -38,11 +38,17 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 }
 
 
-const BatteryService = new bleno.PrimaryService({
-	uuid: '180F',
-	characteristics: [
-		new BatteryLevelCharacteristic()
-	]
-});
+class BatteryService extends bleno.PrimaryService {
+	constructor() {
+		super({
+			uuid: '180F',
+			characteristics: [
+				new BatteryLevelCharacteristic()
+			]
+		});
 
-module.exports = BatteryService;
+		this.name = 'Battery';
+	}
+}
+
+module.exports.BatteryService = BatteryService;
