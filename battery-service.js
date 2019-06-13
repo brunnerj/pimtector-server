@@ -51,4 +51,4 @@ class BatteryService extends bleno.PrimaryService {
 	}
 }
 
-module.exports.BatteryService = BatteryService;
+exports = BatteryService;
