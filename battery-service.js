@@ -41,7 +41,7 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 		const prevLevel = this.level;
 
 		if (seconds_since_charged <= 3600) {
-			this.level = 100 - (seconds_since_charged / 36);
+			this.level = Math.round(100 - (seconds_since_charged / 36));
 		} else {
 			console.log('Battery fully charged');
 			this.time = new Date();
