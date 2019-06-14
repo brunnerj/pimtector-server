@@ -6,7 +6,7 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 	constructor() {
 		super({
 			uuid: '2a19',
-			properties: ['read'],
+			properties: ['read', 'notify'],
 			descriptors: [
 				new bleno.Descriptor({
 					uuid: '2901',
@@ -27,15 +27,55 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 			]
 		});
 
-		this.name = 'Battery';
+		this.name = 'battery_level';
+		this.level = 100; // init with full charge
+		this.time = new Date(); // full charge at this time
+		this.updateDelay_ms = 5000; // how long to wait between battery level poll
+	}
+
+	updateLevel(suppressNotify) {
+		// our battery starts at 100, drains to 0 over an hour,
+		// then recharges to 100.
+		const now = new Date();
+		const seconds_since_charged = (now.getTime() - this.time.getTime()) / 1000;
+		const prevLevel = this.level;
+
+		if (seconds_since_charged <= 3600) {
+			this.level = 100 - (seconds_since_charged / 36);
+		} else {
+			console.log('Battery fully charged');
+			this.time = new Date();
+			this.level = 100;
+		}
+
+		if (!suppressNotify && prevLevel !== this.level) {
+			this.notify();
+		}
+	}
+
+	start() {
+		console.log('Starting battery service level monitor');
+
+		this.updateLevel();
+		
+		this.handle = setInterval(() => { 
+			this.updateLevel();
+		}, this.updateDelay_ms);
+	}
+
+	stop() {
+		console.log('Stopping battery service level monitor');
+
+		clearInterval(this.handle);
+		this.handle = null;
 	}
 
 	onReadRequest(offset, callback) {
 		try {
-			const level = Math.floor(Math.random()*(100-30+1)+30); // fake level between 30 and 100 (%)
-			const result = new Buffer.from([ level ]); // level coerced to uint8 with & 255 operation
+			this.updateLevel(true); // force update level on read requests, but don't notify
 
-			console.log(`Returning battery result: ${result.toString('hex')} (${level} %)`);
+			const result = new Buffer.from([ this.level ]);
+			console.log(`Returning battery result: ${result.toString('hex')} (${result.readUInt8(0)} %)`);
 
 			callback(this.RESULT_SUCCESS, result);
 
@@ -45,19 +85,49 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 			callback(this.RESULT_UNLIKELY_ERROR);
 		}
 	}
+
+	onSubscribe(maxValueSize, updateValueCallback) {
+		console.log(`Battery level subscribed, max value size is ${maxValueSize}`);
+		this.updateValueCallback = updateValueCallback;
+	}
+
+	onUnsubscribe() {
+		console.log('Battery level unsubscribed');
+		this.updateValueCallback = null;
+	}
+
+	notify() {
+		if (this.updateValueCallback) {
+			console.log(`Sending battery level notification with level ${this.level} %`);
+
+			this.updateValueCallback(new Buffer.from([ this.level ]));
+		}
+	}
 }
 
 
 class BatteryService extends bleno.PrimaryService {
+
 	constructor() {
+
+		this.level = new BatteryLevelCharacteristic();
+
 		super({
 			uuid: '180f',
 			characteristics: [
-				new BatteryLevelCharacteristic()
+				this.level
 			]
 		});
 
 		this.name = 'battery_service';
+	}
+
+	start() { 
+		this.level.start();
+	}
+
+	stop() { 
+		this.level.stop(); 
 	}
 }
 

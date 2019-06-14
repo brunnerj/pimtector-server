@@ -45,6 +45,13 @@ const pimtectorService = new PIMtectorService();
 console.log(`${SERVER_APP_NAME} starting BLE peripheral server...`);
 
 
+const advertise = () => {
+	bleno.startAdvertising(SERVER_APP_NAME, [ pimtectorService.uuid ], err => {
+		if (err) console.error(err);
+	});
+}
+
+
 // Wait for power on to start advertising our services
 bleno.on('stateChange', state => {
 
@@ -52,13 +59,7 @@ bleno.on('stateChange', state => {
 
 	if (state === 'poweredOn') {
 		
-		bleno.startAdvertising(SERVER_APP_NAME, [
-			pimtectorService.uuid,
-			deviceInformationService.uuid,
-			batteryService.uuid
-		], err => {
-			if (err) console.error(err);
-		});
+		advertise();
 
 	} else {
 		console.log(`Stopping advertising since state is ${state} (instead of poweredOn).`);
@@ -103,6 +104,7 @@ bleno.on('servicesSetError', err => console.log('[bleno] servicesSetError'));
 bleno.on('accept', function(clientAddress) {
 	console.log(`[bleno] accept ${clientAddress}`);
 	bleno.stopAdvertising();
+	batteryService.start(); // start battery service updates
 });
 
 
@@ -110,7 +112,6 @@ bleno.on('accept', function(clientAddress) {
 // and start advertising
 bleno.on('disconnect', function(clientAddress) {
 	console.log(`[bleno] disconnect ${clientAddress}`);
-	bleno.startAdvertising(SERVER_APP_NAME, [pimtectorService.uuid], err => {
-		if (err) console.error(err);
-	});
+	batteryService.stop(); // stop battery service updates
+	advertise();
 });
