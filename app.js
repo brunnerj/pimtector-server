@@ -1,24 +1,48 @@
 'use strict';
 
-const SERVER_APP_NAME = 'PIMtector';
+/* PIMtector BLE device server service layout (Services, Characteristics, Descriptors):
+ *
+ *	- Service: Battery Service
+ *		- Characteristic: Battery Level
+ *			- Descriptor: Characteristic User Description
+ *			- Descriptor: Characteristic Presentation Format (8bit uint, percent)
+ *
+ *	- Service: Device Information Service
+ *		- Characteristic: Manufacturer
+ *			- Descriptor: Characteristic User Description
+ *			- Descriptor: Characteristic Presentation Format (utf8 string, unitless)
+ *		- Characteristic: Model
+ *			- Descriptor: Characteristic User Description
+ *			- Descriptor: Characteristic Presentation Format (utf8 string, unitless)
+ *		- Characteristic: HardwareVersion
+ *			- Descriptor: Characteristic User Description
+ *			- Descriptor: Characteristic Presentation Format (utf8 string, unitless)
+ *		- Characteristic: FirmwareVersion
+ *			- Descriptor: Characteristic User Description
+ *			- Descriptor: Characteristic Presentation Format (utf8 string, unitless)
+ *
+ *	- Service: PIMtector Service
+ *		- Characteristic: RSSI Level
+ *			- Descriptor: Characteristic User Description
+ *			- Descriptor: Characteristic Presentation Format (16bit int, decibel)
+ */
 
 const bleno = require('bleno');
+
+const SERVER_APP_NAME = 'PIMtector';
+
 const BatteryService = require('./battery-service');
+const DeviceInformationService = require('./device-information-service');
+const PIMtectorService = require('./pimtector-service');
 
 
-// Set up the service classes...
-
-// Battery Service
-// Read only battery level between 0 and 100 percent
+// Create service classes
 const batteryService = new BatteryService();
+const deviceInformationService = new DeviceInformationService();
+const pimtectorService = new PIMtectorService();
 
 
-// Group services and uuid's for easy consumption
-const services = [ batteryService ];
-const serviceUUIDs = [ batteryService.uuid ];
-
-
-console.log(`${SERVER_APP_NAME} starting bleno server...`);
+console.log(`${SERVER_APP_NAME} starting BLE peripheral server...`);
 
 
 // Wait for power on to start advertising our services
@@ -28,7 +52,7 @@ bleno.on('stateChange', state => {
 
 	if (state === 'poweredOn') {
 		
-		bleno.startAdvertising(SERVER_APP_NAME, serviceUUIDs, err => {
+		bleno.startAdvertising(SERVER_APP_NAME, [pimtectorService.uuid], err => {
 			if (err) console.error(err);
 		});
 
@@ -50,7 +74,11 @@ bleno.on('advertisingStart', err => {
 
 	console.log('Configuring services...');
 	
-	bleno.setServices(services, err => {
+	bleno.setServices([
+		batteryService,
+		deviceInformationService,
+		pimtectorService
+	], err => {
 		if(err)
 			console.error(err);
 		else
