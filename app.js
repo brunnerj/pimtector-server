@@ -46,7 +46,11 @@ console.log(`${SERVER_APP_NAME} starting BLE peripheral server...`);
 
 
 const advertise = () => {
-	bleno.startAdvertising(SERVER_APP_NAME, [ pimtectorService.uuid ], err => {
+	bleno.startAdvertising(SERVER_APP_NAME, [ 
+		pimtectorService.uuid, 
+		deviceInformationService.uuid, 
+		batteryService.uuid 
+	], err => {
 		if (err) console.error(err);
 	});
 }
