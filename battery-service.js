@@ -7,6 +7,7 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 		super({
 			uuid: '2a19',
 			properties: ['read', 'notify'],
+			value: new Buffer.from([ 100 ]),
 			descriptors: [
 				new bleno.Descriptor({
 					uuid: '2901',
@@ -28,7 +29,6 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 		});
 
 		this.name = 'battery_level';
-		this.level = 100; // init with full charge
 		this.time = new Date(); // full charge at this time
 		this.updateDelay_ms = 5000; // how long to wait between battery level poll
 	}
@@ -38,17 +38,17 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 		// then recharges to 100.
 		const now = new Date();
 		const seconds_since_charged = (now.getTime() - this.time.getTime()) / 1000;
-		const prevLevel = this.level;
+		const prevLevel = this.value.readUInt8(0);
 
 		if (seconds_since_charged <= 3600) {
-			this.level = Math.round(100 - (seconds_since_charged / 36));
+			this.value = new Buffer.from([ Math.round(100 - (seconds_since_charged / 36)) ]);
 		} else {
 			console.log('Battery fully charged');
 			this.time = new Date();
-			this.level = 100;
+			this.value = new Buffer.from([ 100 ]);
 		}
 
-		if (!suppressNotify && prevLevel !== this.level) {
+		if (!suppressNotify && prevLevel !== this.value.readUInt8(0)) {
 			this.notify();
 		}
 	}
@@ -74,10 +74,9 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 		try {
 			this.updateLevel(true); // force update level on read requests, but don't notify
 
-			const result = new Buffer.from([ this.level ]);
-			console.log(`Returning battery result: ${result.toString('hex')} (${result.readUInt8(0)} %)`);
+			console.log(`Returning battery result: ${this.value.toString('hex')} (${this.value.readUInt8(0)} %)`);
 
-			callback(this.RESULT_SUCCESS, result);
+			callback(this.RESULT_SUCCESS, this.value);
 
 		} catch (err) {
 
@@ -98,9 +97,9 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 
 	notify() {
 		if (this.updateValueCallback) {
-			console.log(`Sending battery level notification with level ${this.level} %`);
+			console.log(`Sending battery level notification with level ${this.value.readUInt8(0)} %`);
 
-			this.updateValueCallback(new Buffer.from([ this.level ]));
+			this.updateValueCallback(this.value);
 		}
 	}
 }
