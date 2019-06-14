@@ -72,7 +72,7 @@ bleno.on('advertisingStart', err => {
 		return;
 	}
 
-	console.log('Configuring services...');
+	console.log('Configuring services');
 	
 	bleno.setServices([
 		batteryService,

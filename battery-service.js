@@ -57,7 +57,7 @@ class BatteryService extends bleno.PrimaryService {
 			]
 		});
 
-		this.name = 'Battery';
+		this.name = 'battery_service';
 	}
 }
 
