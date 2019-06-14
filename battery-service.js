@@ -7,7 +7,6 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 		super({
 			uuid: '2a19',
 			properties: ['read', 'notify'],
-			value: new Buffer.from([ 100 ]),
 			descriptors: [
 				new bleno.Descriptor({
 					uuid: '2901',
@@ -29,6 +28,7 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 		});
 
 		this.name = 'battery_level';
+		this.value = new Buffer.from([ 100 ]);
 		this.time = new Date(); // full charge at this time
 		this.updateDelay_ms = 5000; // how long to wait between battery level poll
 	}
