@@ -52,7 +52,11 @@ bleno.on('stateChange', state => {
 
 	if (state === 'poweredOn') {
 		
-		bleno.startAdvertising(SERVER_APP_NAME, [pimtectorService.uuid], err => {
+		bleno.startAdvertising(SERVER_APP_NAME, [
+			pimtectorService.uuid,
+			deviceInformationService.uuid,
+			batteryService.uuid
+		], err => {
 			if (err) console.error(err);
 		});
 
