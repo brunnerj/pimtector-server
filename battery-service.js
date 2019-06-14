@@ -57,7 +57,7 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 		console.log('Starting battery service level monitor');
 
 		this.updateLevel();
-		
+
 		this.handle = setInterval(() => { 
 			this.updateLevel();
 		}, this.updateDelay_ms);
@@ -110,16 +110,17 @@ class BatteryService extends bleno.PrimaryService {
 
 	constructor() {
 
-		this.level = new BatteryLevelCharacteristic();
+		const _level = new BatteryLevelCharacteristic();
 
 		super({
 			uuid: '180f',
 			characteristics: [
-				this.level
+				_level
 			]
 		});
 
 		this.name = 'battery_service';
+		this.level = _level;
 	}
 
 	start() { 
