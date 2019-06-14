@@ -28,7 +28,7 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 		});
 
 		this.name = 'battery_level';
-		this.value = new Buffer.from([ 100 ]);
+		this.level = new Buffer.from([ 100 ]);
 		this.time = new Date(); // full charge at this time
 		this.updateDelay_ms = 5000; // how long to wait between battery level poll
 	}
@@ -38,17 +38,17 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 		// then recharges to 100.
 		const now = new Date();
 		const seconds_since_charged = (now.getTime() - this.time.getTime()) / 1000;
-		const prevLevel = this.value.readUInt8(0);
+		const prevLevel = this.level.readUInt8(0);
 
 		if (seconds_since_charged <= 3600) {
-			this.value = new Buffer.from([ Math.round(100 - (seconds_since_charged / 36)) ]);
+			this.level = new Buffer.from([ Math.round(100 - (seconds_since_charged / 36)) ]);
 		} else {
 			console.log('Battery fully charged');
 			this.time = new Date();
-			this.value = new Buffer.from([ 100 ]);
+			this.level = new Buffer.from([ 100 ]);
 		}
 
-		if (!suppressNotify && prevLevel !== this.value.readUInt8(0)) {
+		if (!suppressNotify && prevLevel !== this.level.readUInt8(0)) {
 			this.notify();
 		}
 	}
@@ -74,9 +74,9 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 		try {
 			this.updateLevel(true); // force update level on read requests, but don't notify
 
-			console.log(`Returning battery result: ${this.value.toString('hex')} (${this.value.readUInt8(0)} %)`);
+			console.log(`Returning battery result: ${this.level.toString('hex')} (${this.level.readUInt8(0)} %)`);
 
-			callback(this.RESULT_SUCCESS, this.value);
+			callback(this.RESULT_SUCCESS, this.level);
 
 		} catch (err) {
 
@@ -97,9 +97,9 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 
 	notify() {
 		if (this.updateValueCallback) {
-			console.log(`Sending battery level notification with level ${this.value.readUInt8(0)} %`);
+			console.log(`Sending battery level notification with level ${this.level.readUInt8(0)} %`);
 
-			this.updateValueCallback(this.value);
+			this.updateValueCallback(this.level);
 		}
 	}
 }
