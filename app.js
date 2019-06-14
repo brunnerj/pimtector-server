@@ -106,5 +106,7 @@ bleno.on('accept', function(clientAddress) {
 // and start advertising
 bleno.on('disconnect', function(clientAddress) {
 	console.log(`[bleno] disconnect ${clientAddress}`);
-	bleno.startAdvertising();
+	bleno.startAdvertising(SERVER_APP_NAME, [pimtectorService.uuid], err => {
+		if (err) console.error(err);
+	});
 });
