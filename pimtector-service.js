@@ -39,7 +39,7 @@ class RSSICharacteristic extends bleno.Characteristic {
 			const result = new Buffer.alloc(2); // 2 bytes, 16 bits for int16
 			result.writeInt16LE(level);
 
-			console.log(`Returning RSSI result: ${result} (${level})`);
+			console.log(`Returning RSSI result: ${result.toString('hex')} (${level / 100} dBm)`);
 
 			callback(this.RESULT_SUCCESS, result);
 

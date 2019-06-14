@@ -35,7 +35,7 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 			const level = Math.floor(Math.random()*(100-30+1)+30); // fake level between 30 and 100 (%)
 			const result = new Buffer.from([ level ]); // level coerced to uint8 with & 255 operation
 
-			console.log(`Returning battery result: ${result} (${level})`);
+			console.log(`Returning battery result: ${result.toString('hex')} (${level} %)`);
 
 			callback(this.RESULT_SUCCESS, result);
 
