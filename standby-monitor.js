@@ -74,6 +74,11 @@ const standbyDetector = (err) => {
 
 log('standby detection starting');
 
+// Illuminate status LED (it should be high at
+// boot, so it may blink off during init above
+// until we set it back high here)
+status.writeSync(Gpio.HIGH);
+
 // infinite watcher - system signals can stop this
 button.watch(standbyDetector);
 
