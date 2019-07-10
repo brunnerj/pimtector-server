@@ -1,5 +1,6 @@
 #!/usr/local/bin/node
 
+const { exec } = require('child_process');
 const Gpio = require('onoff').Gpio;
 
 //const STANDBY_FLAG = false; // set after detecting a standby signal
@@ -20,14 +21,25 @@ const log = (msg) => {
 
 // called to halt system
 const halt = () => {
+	
+	// blink status
 	const iv = setInterval(() => {
 		status.writeSync(status.readSync() ^ 1);
 	}, 100);
 
 	setTimeout(() => {
+
+		// stop blinking
 		clearInterval(iv);
+
+		// turn status off
 		status.writeSync(Gpio.LOW);
+
 		log('halting');
+
+		// execute halt command
+		exec('shutdown -h now', (msg) => { log(msg) });
+
 	}, 500);
 }
 
