@@ -72,6 +72,8 @@ const standbyDetector = (err) => {
 	}
 }
 
+log('standby detection starting');
+
 // infinite watcher - system signals can stop this
 button.watch(standbyDetector);
 
