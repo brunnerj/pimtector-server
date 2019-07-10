@@ -6,19 +6,20 @@ const Gpio = require('onoff').Gpio;
 const STANDBY_HOLD_TIME_ms = 1000; // button must be held this long to signal standby
 
 const GPIO_STATUS = 17; // write 1 for on, 0 for off
-const GPIO_STANDBY = 3; // detect falling edge on GPIO3
+const GPIO_BUTTON = 3; // detect falling edge on GPIO3
 
 
 // Set up the status LED and standby button
 const status = new Gpio(GPIO_STATUS, 'out');
-const button = new Gpio(GPIO_STANDBY, 'in', 'falling', { debounceTimeout: 50 });
+const button = new Gpio(GPIO_BUTTON, 'in', 'falling', { debounceTimeout: 50 });
 
-
+// logging helper
 const log = (msg) => {
 	console.log('[standby-monitor] ' + msg);
 }
 
-const blink = () => {
+// called to halt system
+const halt = () => {
 	const iv = setInterval(() => {
 		status.writeSync(status.readSync() ^ 1);
 	}, 100);
@@ -26,10 +27,13 @@ const blink = () => {
 	setTimeout(() => {
 		clearInterval(iv);
 		status.writeSync(Gpio.LOW);
+		log('halting');
 	}, 500);
 }
 
-const standby = (err, value) => {
+
+// callback when standby button push detected
+const standbyDetector = (err) => {
 
 	if (err) throw err;
 
@@ -38,29 +42,28 @@ const standby = (err, value) => {
 		return;
 
 	// Else see how long the button is held
-	// and go to standby if it's held long enough
-	log('standby button push detected');
+	// and halt if it's held long enough
+	log('standby detected');
 
 	let start_ms = Date.now();
-	let standingBy = false;
+	let halting = false;
 
-	while (button.readSync() === Gpio.LOW && !standingBy) {
+	while (button.readSync() === Gpio.LOW && !halting) {
 
-		standingBy = (Date.now() - start_ms) > STANDBY_HOLD_TIME_ms;
+		halting = (Date.now() - start_ms) > STANDBY_HOLD_TIME_ms;
 	}
 
-	if (standingBy) {
-		log('going to standby');
-		blink();
-	} else {
-		log('standby detector reset');
+	if (halting) {
+		halt();
 	}
 }
 
+// infinite watcher - system signals can stop this
+button.watch(standbyDetector);
 
-button.watch(standby);
-
-process.on('SIGINT', () => {
+// listen for system signals and cleanup
+['SIGINT', 'SIGTERM', 'SIGHUP'].forEach(signal => process.on(signal, () => {
+	log(signal + ' detected');
 	status.unexport();
 	button.unexport();
-});
+}));
