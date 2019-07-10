@@ -6,7 +6,7 @@ const Gpio = require('onoff').Gpio;
 //const STANDBY_FLAG = false; // set after detecting a standby signal
 const STANDBY_HOLD_TIME_ms = 1000; // button must be held this long to signal standby
 
-const GPIO_STATUS = 17; // write 1 for on, 0 for off
+const GPIO_STATUS = 14; // write 1 for on, 0 for off
 const GPIO_BUTTON = 3; // detect falling edge on GPIO3
 
 
