@@ -55,6 +55,8 @@ const standbyDetector = (err) => {
 
 	if (halting) {
 		halt();
+	} else {
+		log('standby reset');
 	}
 }
 
@@ -63,7 +65,7 @@ button.watch(standbyDetector);
 
 // listen for system signals and cleanup
 ['SIGINT', 'SIGTERM', 'SIGHUP'].forEach(signal => process.on(signal, () => {
-	log(signal + ' detected');
+	log(signal + ' detected - exiting');
 	status.unexport();
 	button.unexport();
 }));
