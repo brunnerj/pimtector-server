@@ -27,6 +27,7 @@
   "dependencies": {
     "@abandonware/bluetooth-hci-socket": "^0.5.3-1",
     "bleno": "^0.5.0",
-    "bluetooth-serial-port": "^2.2.4"
+    "bluetooth-serial-port": "^2.2.4",
+    "onoff": "^4.1.3"
   }
 }
