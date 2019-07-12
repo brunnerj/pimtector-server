@@ -1,6 +1,6 @@
 'use strict';
 
-/* PIMtector BLE device server service layout (Services, Characteristics, Descriptors):
+/* BLE device server service layout (Services, Characteristics, Descriptors):
  *
  *	- Service: Battery Service
  *		- Characteristic: Battery Level
@@ -21,8 +21,8 @@
  *			- Descriptor: Characteristic User Description
  *			- Descriptor: Characteristic Presentation Format (utf8 string, unitless)
  *
- *	- Service: PIMtector Service
- *		- Characteristic: RSSI Level
+ *	- Service: Receiver Service
+ *		- Characteristic: Receiver Level
  *			- Descriptor: Characteristic User Description
  *			- Descriptor: Characteristic Presentation Format (16bit int, decibel)
  */
@@ -33,13 +33,13 @@ const SERVER_APP_NAME = 'PIMtector';
 
 const BatteryService = require('./battery-service');
 const DeviceInformationService = require('./device-information-service');
-const PIMtectorService = require('./pimtector-service');
+const ReceiverService = require('./receiver-service');
 
 
 // Create service classes
 const batteryService = new BatteryService();
 const deviceInformationService = new DeviceInformationService();
-const pimtectorService = new PIMtectorService();
+const receiverService = new ReceiverService();
 
 
 console.log(`${SERVER_APP_NAME} starting BLE peripheral server...`);
@@ -47,7 +47,7 @@ console.log(`${SERVER_APP_NAME} starting BLE peripheral server...`);
 
 const advertise = () => {
 	bleno.startAdvertising(SERVER_APP_NAME, [ 
-		pimtectorService.uuid, 
+		receiverService.uuid, 
 		deviceInformationService.uuid, 
 		batteryService.uuid 
 	], err => {
@@ -86,7 +86,7 @@ bleno.on('advertisingStart', err => {
 	bleno.setServices([
 		batteryService,
 		deviceInformationService,
-		pimtectorService
+		receiverService
 	], err => {
 		if(err)
 			console.error(err);
