@@ -3,19 +3,19 @@
 const bleno = require('bleno');
 
 
-const PIMTECTOR_SERVICE_UUID	= '00010000-8d54-11e9-b475-0800200c9a66';
-const RSSI_CHAR_UUID			= '00010001-8d54-11e9-b475-0800200c9a66';
+const RECEIVER_SERVICE_UUID	= '00010000-8d54-11e9-b475-0800200c9a66';
+const RECEIVER_CHAR_UUID	= '00010001-8d54-11e9-b475-0800200c9a66';
 
 
-class RSSICharacteristic extends bleno.Characteristic {
+class ReceiverCharacteristic extends bleno.Characteristic {
 	constructor() {
 		super({
-			uuid: RSSI_CHAR_UUID,
+			uuid: RECEIVER_CHAR_UUID,
 			properties: ['read'],
 			descriptors: [
 				new bleno.Descriptor({
 					uuid: '2901',
-					value: 'RSSI power in decibels above 1mW reference, dBm'
+					value: 'Received power in decibels above 1mW reference, dBm'
 				}),
 				new bleno.Descriptor({
 					uuid: '2904',
@@ -39,7 +39,7 @@ class RSSICharacteristic extends bleno.Characteristic {
 			const result = new Buffer.alloc(2); // 2 bytes, 16 bits for int16
 			result.writeInt16LE(level);
 
-			console.log(`Returning RSSI result: ${result.toString('hex')} (${level / 100} dBm)`);
+			console.log(`Returning receiver result: ${result.toString('hex')} (${level / 100} dBm)`);
 
 			callback(this.RESULT_SUCCESS, result);
 
@@ -52,15 +52,15 @@ class RSSICharacteristic extends bleno.Characteristic {
 }
 
 
-class PIMtectorService extends bleno.PrimaryService {
+class ReceiverService extends bleno.PrimaryService {
 	constructor() {
 		super({
-			uuid: PIMTECTOR_SERVICE_UUID,
+			uuid: RECEIVER_SERVICE_UUID,
 			characteristics: [
-				new RSSICharacteristic()
+				new ReceiverCharacteristic()
 			]
 		});
 	}
 }
 
-module.exports = PIMtectorService;
+module.exports = ReceiverService;
