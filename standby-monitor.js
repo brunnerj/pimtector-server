@@ -1,4 +1,21 @@
-#!/usr/local/bin/node
+/* standby-monitor.js
+ * 
+ * Runs as a system service and monitors standby button presses. Also
+ * controls a (blue) status LED.
+ * 
+ * The standby button essentially shorts pins 5 & 6 on the Raspberry Pi.
+ * When the Pi is in standby, shorting these pins signals a startup. It
+ * takes a few seconds to get up to speed, but the status LED lights
+ * very quickly. It may also flicker a bit because it's connected to
+ * TxD, GPIO14. Status may also flash off briefly as the GPIO pin is
+ * initialized, but will be set 'on' before the monitoring loop starts.
+ * 
+ * The standby button must be held for a bit before the event is
+ * registered. See the constants below to fine tune the operation.
+ * 
+ * This program is started via the standby-monitor service routine
+ * which gets installed (copied) to /etc/init.d/.
+ */
 
 const { exec } = require('child_process');
 const Gpio = require('onoff').Gpio;

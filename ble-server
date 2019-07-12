@@ -1,7 +1,7 @@
 #!/bin/sh
 
 ### BEGIN INIT INFO
-# Provides:		standby-monitor
+# Provides:		ble-server
 # Required-Start:	$remote-fs $syslog
 # Required-Stop:	$remote-fs $syslog
 # Default-Start:	2 3 4 5
@@ -10,12 +10,12 @@
 
 case "$1" in
 	start)
-		echo "Starting standby-monitor service"
-		/usr/local/bin/node /root/pimtector-server/standby-monitor.js &
+		echo "Starting bluetooth LE service"
+		/usr/local/bin/node /root/pimtector-server/ble-server.js &
 		;;
 	stop)
-		echo "Stopping standby-monitor service"
-		pkill -f /root/pimtector-server/standby-monitor.js
+		echo "Stopping bluetooth LE service"
+		pkill -f /root/pimtector-server/ble-server.js
 		;;
 	*)
 		echo "Usage: /etc/init.d/standby-monitor {start|stop}"
