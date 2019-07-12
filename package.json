@@ -1,8 +1,7 @@
 {
-  "name": "pimtector",
+  "name": "pimtector-server",
   "version": "1.0.0",
-  "description": "bluetooth serial server for PIMtector receiver",
-  "main": "index.js",
+  "description": "PIMtector device ble and service routines",
   "scripts": {
     "test": "echo 'make some tests!'"
   },
