@@ -114,17 +114,17 @@ const lboDetector = (err) => {
 	}
 }
 
-log('standby detection starting');
-
 // Illuminate status LED (it should be high at
 // boot, so it may blink off during init above
 // until we set it back high here)
 status.writeSync(Gpio.HIGH);
 
 // watch the standby button GPIO interrupt
+log('standby detection starting');
 button.watch(standbyDetector);
 
 // watch for the LBO signal interrupt
+log('LBO detection starting');
 lbo.watch(lboDetector);
 
 // listen for system signals and cleanup
