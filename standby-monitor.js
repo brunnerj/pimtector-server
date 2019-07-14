@@ -20,16 +20,17 @@
 const { exec } = require('child_process');
 const Gpio = require('onoff').Gpio;
 
-//const STANDBY_FLAG = false; // set after detecting a standby signal
 const STANDBY_HOLD_TIME_ms = 1000; // button must be held this long to signal standby
+const LBO_HOLD_TIME_ms = 60000; // LBO detected for 1 minute for shutdown
 
 const GPIO_STATUS = 14; // write 1 for on, 0 for off
 const GPIO_BUTTON = 3; // detect falling edge on GPIO3
-
+const GPIO_LBO_DETECT = 4; // detect low battery output (LBO); active low
 
 // Set up the status LED and standby button
 const status = new Gpio(GPIO_STATUS, 'out');
 const button = new Gpio(GPIO_BUTTON, 'in', 'falling', { debounceTimeout: 50 });
+const lbo = new Gpio(GPIO_LBO_DETECT, 'in', 'falling', { debounceTimeout: 10 });
 
 // logging helper
 const log = (msg) => {
@@ -60,7 +61,6 @@ const halt = () => {
 	}, 500);
 }
 
-
 // callback when standby button push detected
 const standbyDetector = (err) => {
 
@@ -89,6 +89,31 @@ const standbyDetector = (err) => {
 	}
 }
 
+const lboDetector = (err) => {
+
+	if (err) throw err;
+
+	// check LBO and return if not LOW
+	if (lbo.readSync() === Gpio.HIGH)
+		return;
+
+	log('low battery detected');
+
+	let start_ms = Date.now();
+	let halting = false;
+
+	while (lbo.readSync() === Gpio.LOW && !halting) {
+
+		halting = (Date.now() - start_ms) > LBO_HOLD_TIME_ms;
+	}
+
+	if (halting) {
+		halt();
+	} else {
+		log('low battery reset');
+	}
+}
+
 log('standby detection starting');
 
 // Illuminate status LED (it should be high at
@@ -96,12 +121,16 @@ log('standby detection starting');
 // until we set it back high here)
 status.writeSync(Gpio.HIGH);
 
-// infinite watcher - system signals can stop this
+// watch the standby button GPIO interrupt
 button.watch(standbyDetector);
+
+// watch for the LBO signal interrupt
+lbo.watch(lboDetector);
 
 // listen for system signals and cleanup
 ['SIGINT', 'SIGTERM', 'SIGHUP'].forEach(signal => process.on(signal, () => {
 	log(signal + ' detected - exiting');
 	status.unexport();
 	button.unexport();
+	lbo.unexport();
 }));
