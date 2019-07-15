@@ -1,3 +1,5 @@
+'use strict';
+
 /* standby-monitor.js
  * 
  * Runs as a system service and monitors standby button presses. Also
@@ -19,6 +21,7 @@
 
 const { exec } = require('child_process');
 const Gpio = require('onoff').Gpio;
+const logger = require('logging');
 
 const STANDBY_HOLD_TIME_ms = 1000; // button must be held this long to signal standby
 const LBO_HOLD_TIME_ms = 60000; // LBO detected for 1 minute for shutdown
@@ -32,10 +35,6 @@ const status = new Gpio(GPIO_STATUS, 'out');
 const button = new Gpio(GPIO_BUTTON, 'in', 'falling', { debounceTimeout: 50 });
 const lbo = new Gpio(GPIO_LBO_DETECT, 'in', 'falling', { debounceTimeout: 10 });
 
-// logging helper
-const log = (msg) => {
-	console.log('[standby-monitor] ' + msg);
-}
 
 // called to halt system
 const halt = () => {
@@ -53,10 +52,12 @@ const halt = () => {
 		// turn status off
 		status.writeSync(Gpio.LOW);
 
-		log('halting');
+		logger.info('halting');
 
 		// execute halt command
-		exec('shutdown -h now', (msg) => { log(msg) });
+		exec('shutdown -h now', (msg) => { 
+			logger.info(msg); 
+		});
 
 	}, 500);
 }
@@ -64,7 +65,10 @@ const halt = () => {
 // callback when standby button push detected
 const standbyDetector = (err) => {
 
-	if (err) throw err;
+	if (err) {
+		logger.error('Error calling standbyDetector: ' + err);
+		throw err;
+	}
 
 	// Check button and return if not held (LOW) long enough
 	if (button.readSync() === Gpio.HIGH)
@@ -72,7 +76,7 @@ const standbyDetector = (err) => {
 
 	// Else see how long the button is held
 	// and halt if it's held long enough
-	log('standby detected');
+	logger.info('standby detected');
 
 	let start_ms = Date.now();
 	let halting = false;
@@ -85,19 +89,22 @@ const standbyDetector = (err) => {
 	if (halting) {
 		halt();
 	} else {
-		log('standby reset');
+		logger.info('standby reset');
 	}
 }
 
 const lboDetector = (err) => {
 
-	if (err) throw err;
+	if (err) {
+		logger.error('Error calling lboDetector: ' + err);
+		throw err;
+	}
 
 	// check LBO and return if not LOW
 	if (lbo.readSync() === Gpio.HIGH)
 		return;
 
-	log('low battery detected');
+	logger.info('low battery detected');
 
 	let start_ms = Date.now();
 	let halting = false;
@@ -110,7 +117,7 @@ const lboDetector = (err) => {
 	if (halting) {
 		halt();
 	} else {
-		log('low battery reset');
+		logger.info('low battery reset');
 	}
 }
 
@@ -120,16 +127,16 @@ const lboDetector = (err) => {
 status.writeSync(Gpio.HIGH);
 
 // watch the standby button GPIO interrupt
-log('standby detection starting');
+logger.info('standby detection starting');
 button.watch(standbyDetector);
 
 // watch for the LBO signal interrupt
-log('LBO detection starting');
+logger.info('LBO detection starting');
 lbo.watch(lboDetector);
 
 // listen for system signals and cleanup
 ['SIGINT', 'SIGTERM', 'SIGHUP'].forEach(signal => process.on(signal, () => {
-	log(signal + ' detected - exiting');
+	logger.info(signal + ' detected - exiting');
 	status.unexport();
 	button.unexport();
 	lbo.unexport();
