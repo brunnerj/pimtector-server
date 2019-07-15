@@ -21,7 +21,8 @@
 
 const { exec } = require('child_process');
 const Gpio = require('onoff').Gpio;
-const logger = require('logging');
+
+const logger = require('./logging');
 
 const STANDBY_HOLD_TIME_ms = 1000; // button must be held this long to signal standby
 const LBO_HOLD_TIME_ms = 60000; // LBO detected for 1 minute for shutdown
