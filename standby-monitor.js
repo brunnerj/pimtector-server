@@ -27,14 +27,18 @@ const logger = require('./logging');
 const STANDBY_HOLD_TIME_ms = 1000; // button must be held this long to signal standby
 const LBO_HOLD_TIME_ms = 60000; // LBO detected for 1 minute for shutdown
 
-const GPIO_STATUS = 14; // write 1 for on, 0 for off
-const GPIO_BUTTON = 3; // detect falling edge on GPIO3
-const GPIO_LBO_DETECT = 4; // detect low battery output (LBO); active low
+const GPIO_STATUS = 14; // write 1 for on, 0 for off (GPIO PIN 8 == GPIO14/UART0_TXD)
+const GPIO_BUTTON = 22; // detect falling edge on GPIO22 (GPIO PIN 15 == GPIO22)
+const GPIO_LBO_DETECT = 4; // detect low battery output - active low (GPIO PIN 7 == GPIO4)
+const GPIO_CHARGE_DETECT = 5; // detect battery charging - active low (GPIO PIN 29 == GPIO5)
+const GPIO_FULL_DETECT = 6; // detect battery full - active low (GPIO PIN 31 == GPIO6)
 
 // Set up the status LED and standby button
 const status = new Gpio(GPIO_STATUS, 'out');
 const button = new Gpio(GPIO_BUTTON, 'in', 'falling', { debounceTimeout: 50 });
 const lbo = new Gpio(GPIO_LBO_DETECT, 'in', 'falling', { debounceTimeout: 10 });
+const charging = new Gpio(GPIO_CHARGE_DETECT, 'in');
+const charged = new Gpio(GPIO_FULL_DETECT, 'in');
 
 
 // called to halt system
@@ -77,8 +81,6 @@ const standbyDetector = (err) => {
 
 	// Else see how long the button is held
 	// and halt if it's held long enough
-	logger.info('standby detected');
-
 	let start_ms = Date.now();
 	let halting = false;
 
@@ -89,11 +91,10 @@ const standbyDetector = (err) => {
 
 	if (halting) {
 		halt();
-	} else {
-		logger.info('standby reset');
 	}
 }
 
+// callback when low battery output detected
 const lboDetector = (err) => {
 
 	if (err) {
@@ -141,4 +142,6 @@ lbo.watch(lboDetector);
 	status.unexport();
 	button.unexport();
 	lbo.unexport();
+	charging.unexport();
+	charged.unexport();
 }));
