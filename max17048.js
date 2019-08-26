@@ -35,11 +35,10 @@ module.exports = class Max17048
 	}
 
 	async readRegister(register) {
-		const swappedWord, word;
 
-		swappedWord = await this.device.readWord(register);
+		const swappedWord = await this.device.readWord(register);
 
-		word = (swappedWord & 0xff) << 8 | (swappedWord >> 8);
+		const word = (swappedWord & 0xff) << 8 | (swappedWord >> 8);
 	
 		return word;
 	}
