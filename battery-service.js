@@ -1,6 +1,11 @@
 'use strict';
 
+// BLE library
 const bleno = require('bleno');
+
+// MAX17048 LiPo battery fuel gauge (uses I2C)
+const Max17048 = require('./max17048');
+
 
 class BatteryLevelCharacteristic extends bleno.Characteristic {
 	constructor() {
@@ -27,30 +32,37 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 			]
 		});
 
+		// init MAX17048 device
+		this.max17048 = new Max17048();
+
 		this.name = 'battery_level';
-		this.level = new Buffer.from([ 100 ]);
-		this.time = new Date(); // full charge at this time
-		this.updateDelay_ms = 5000; // how long to wait between battery level poll
+		this.updateDelay_ms = 30000; // how long to wait between battery level poll
+		
+		this.updateLevel(true);
 	}
 
 	updateLevel(suppressNotify) {
-		// our battery starts at 100, drains to 0 over an hour,
-		// then recharges to 100.
-		const now = new Date();
-		const seconds_since_charged = (now.getTime() - this.time.getTime()) / 1000;
+
 		const prevLevel = this.level.readUInt8(0);
+		
+		console.log('Reading battery level');
 
-		if (seconds_since_charged <= 3600) {
-			this.level = new Buffer.from([ Math.round(100 - (seconds_since_charged / 36)) ]);
-		} else {
-			console.log('Battery fully charged');
-			this.time = new Date();
-			this.level = new Buffer.from([ 100 ]);
-		}
+		this.max17048.getStateOfCharge()
+			.then(soc => {
+				
+				// cap between 0 and 100
+				const newLevel = Math.min(100, Math.max(0, soc * 100));
+				
+				this.time = new Date();
+				this.level = new Buffer.from([ newLevel ]);
 
-		if (!suppressNotify && prevLevel !== this.level.readUInt8(0)) {
-			this.notify();
-		}
+				if (!suppressNotify && prevLevel !== this.level.readUInt8(0)) {
+					this.notify();
+				}
+			})
+			.catch(err => { 
+				console.error(err);
+			});
 	}
 
 	start() {
@@ -58,7 +70,7 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 
 		this.updateLevel();
 
-		this.handle = setInterval(() => { 
+		this.handle = setInterval(async () => { 
 			this.updateLevel();
 		}, this.updateDelay_ms);
 	}
@@ -72,7 +84,7 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 
 	onReadRequest(offset, callback) {
 		try {
-			this.updateLevel(true); // force update level on read requests, but don't notify
+			//this.updateLevel(true); // force update level on read requests, but don't notify
 
 			console.log(`Returning battery result: ${this.level.toString('hex')} (${this.level.readUInt8(0)} %)`);
 

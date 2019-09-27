@@ -18,7 +18,7 @@ case "$1" in
 		pkill -f /root/pimtector-server/ble-server.js
 		;;
 	*)
-		echo "Usage: /etc/init.d/standby-monitor {start|stop}"
+		echo "Usage: /etc/init.d/ble-server {start|stop}"
 		exit 1
 		;;
 esac
