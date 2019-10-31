@@ -296,7 +296,7 @@ function offsetTuning(enable) {
 
 
 // ASYNC DATA
-function startData(onData, onEnd) {
+function startData(onData, onEnd, logger) {
 
 	const dev = openDevice();
 	if (typeof dev === 'string') return dev;
@@ -378,11 +378,11 @@ function startData(onData, onEnd) {
 	}
 
 	function _onEnd() {
-		console.log('[receiver.js] DAQ stopped');
+		 if (logger) logger.info('[receiver.js] DAQ stopped');
 		onEnd();
 	}
 
-	console.log('[receiver.js] DAQ starting');
+	if (logger) logger.info('[receiver.js] DAQ starting');
 	const code = rtlsdr.read_async(dev, _onData, _onEnd, settings.deviceBufs, settings.deviceBufLen);
 	if (code) return error(500, code);
 

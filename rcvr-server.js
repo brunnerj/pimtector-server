@@ -169,7 +169,7 @@ io.on('connection', (socket) => {
 		if (!connection || running) return;
 
 		buffer.length = 0;
-		if (device.startData(onStreamData, onStreamEnd)) {
+		if (device.startData(onStreamData, onStreamEnd, logger)) {
 			logger.error('[rcvr-server] Error starting data stream');
 		} else {
 			running = true;
