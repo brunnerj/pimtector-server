@@ -1,0 +1,468 @@
+<html>
+<head>
+<title>PIMtector Receiver Tester</title> 
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.min.js"></script>
+<script src='/jquery.flot.resize.js'></script>
+<script src='/jquery.flot.axislabels.js'></script>
+<script src='/socket.io/socket.io.js'></script>
+<script type="text/javascript">
+$(document).ready(function()
+{
+	let device = null;
+	let settings = {};
+
+	const handleError = (jqXHR, textStatus, errorThrown) => {
+		$('.errors').text(textStatus);
+	}
+
+	const get_setting = (setting, onError, onSuccess) => {
+		$.ajax({ url: '/' + setting, dataType: 'json' }).done((res) => {
+			if (res.error && onError) {
+				onError(res.error);
+			}
+			else {
+				settings[setting] = res[setting];
+				if (onSuccess) onSuccess(res[setting]);
+			}
+		}).fail(handleError);
+	}
+
+	const set_setting = (setting, value, onError, onSuccess) => {
+		const data = {};
+		data[setting] = value;
+		$.ajax({ type: 'POST', url: '/' + setting, data: JSON.stringify(data), dataType: 'json', contentType: 'application/json' }).done((res) => {
+			if (res.error && onError) {
+				onError(res.error);
+			}
+			else {
+				settings[setting] = res[setting];
+				if (onSuccess) onSuccess(res[setting]);
+			}
+		}).fail(handleError);
+	}
+
+	const connectInterval = setInterval(() => {
+		
+		get_setting('info', 
+			(err) => { 
+				device = null;
+				settings = {};
+
+				handleError(null, err);
+
+				$('button').prop('disabled', true);
+				$('#settings .val').text('--');
+			}, 
+			(info) => {
+
+				device = info;
+
+				$('#vendor').text(device.vendor);
+				$('#product').text(device.product);
+				$('#serial').text(device.serial);
+
+				if (!settings.initialized) {
+
+					set_setting('frequency', 700e6, 
+						(err) => {
+							handleError(null, err);
+						}, 
+						(freq) => {
+							$('#CF-ctl .val').text((freq / 1e6).toFixed(3) + ' MHz');
+						});
+					set_setting('averages', 32, 
+						(err) => {
+							handleError(null, err);
+						}, 
+						(avgs) => {
+							$('#averages-ctl .val').text(avgs);
+						});
+
+					set_setting('gainMode', 0);
+					set_setting('agc', 0);
+					set_setting('gain', 42);
+					//set_setting('freqCorrection', 0);
+					set_setting('sampleRate', 2.56e6);
+
+					set_setting('frames', 4);
+					set_setting('decimate', 16);
+					set_setting('offsetTuning', 1);
+
+					settings.initialized = true;
+
+					$('button').prop('disabled', false);
+
+				} else {
+					get_setting('frequency', 
+						(err) => {
+							handleError(null, err);
+						}, 
+						(freq) => {
+							$('#CF-ctl .val').text((freq / 1e6).toFixed(3) + ' MHz');
+						});
+
+					get_setting('averages',
+						(err) => {
+							handleError(null, err);
+						}, 
+						(avgs) => {
+							$('#averages-ctl .val').text(avgs);
+						});
+
+					get_setting('offsetTuning',
+						(err) => {
+							handleError(null, err);
+						},
+						(enabled) => {
+							$('#offsetTuning-ctl .val').text(enabled ? 'ON' : 'OFF');
+						});
+
+					get_setting('decimate',
+						(err) => {
+							handleError(null, err);
+						}, 
+						(d) => {
+							$('#decimate-ctl .val').text(d);
+						});
+
+					get_setting('frames',
+						(err) => {
+							handleError(null, err);
+						}, 
+						(f) => {
+							$('#frames-ctl .val').text(f);
+						});
+				}
+			});
+
+	}, 5000);
+
+	const socket = io();
+
+	let buffer = [];
+	let traces = [];
+	let peakHold = false;
+	let running = false;
+	
+	const maxBufferLength = 300;
+	const plotRate = 30; // ms
+	let overflow = false;
+
+	// Receive data from server - fill buffer
+	socket.on('data', (data) => {
+		
+		if (running && buffer.length < maxBufferLength) {
+			buffer.push(data);
+			overflow = false;
+			$('.ovf-ind').hide();
+		} else {
+			overflow = true;
+			$('ovf-ind').show();
+		}
+	});
+
+	// Pluck data out of buffer for plotting
+	const plotInterval = setInterval(() => {
+
+		if (buffer.length > 0 && running) {
+
+			const trace = buffer.shift();
+			const N = trace.length;
+			const span = trace[N - 1][0] - trace[0][0];
+			const rbw = span / N;
+
+			let max = -500;
+			let max_pt = 0;
+			for (i = 0; i < trace.length; i++) {
+				if (trace[i][1] > max) {
+					max = trace[i][1];
+					max_pt = i;
+				}
+			}
+
+			$('#N-ind').text(N + ' points');
+			$('#span-ind').text((span * 1e3).toFixed(3) + ' kHz');
+			$('#CF-ind').text((trace[0][0] + span/2).toFixed(3) + ' MHz');
+			$('#rbw-ind').text((rbw * 1e6).toFixed(0) + ' Hz');
+			$('#peak-ind').text(`${trace[max_pt][1].toFixed(1)} dBm @ ${trace[max_pt][0].toFixed(2)} MHz`);
+
+			traces[0] = { label: 'data', data: trace };
+		}
+
+		if (!plotInterval.init) {
+			plotInterval.init = true;
+
+			plotInterval.plot = $.plot('#plot', traces, {
+				legend: {
+					show: true
+				},
+				series: {
+					shadowSize: 0
+				},
+				yaxis: {
+					axisLabel: 'Power [dBm]',
+					min: -130,
+					max: -30,
+					ticks: 10
+				},
+				xaxis: {
+					axisLabel: 'Frequency [MHz]'
+				}
+			});
+
+		} else {
+
+			plotInterval.plot.setData(traces);
+			plotInterval.plot.draw();
+		}
+	}, plotRate);
+
+
+	// Button click handlers
+
+	$('#CF-ctl').bind('click', (e) => {
+		const newFo = parseFloat(prompt('Set new center frequency in MHz:', settings.frequency / 1e6));
+
+		if (newFo) {
+			set_setting('frequency', newFo * 1e6);
+		}
+	});
+
+	$('#averages-ctl').bind('click', (e) => {
+		const newavg = parseInt(prompt('Set number of averages', settings.averages));
+
+		if (newavg && newavg > 0 && newavg <= 64) {
+			set_setting('averages', newavg);
+		}
+	});
+
+	$('#offsetTuning-ctl').bind('click', (e) => {
+		const newOT = parseInt(prompt('Set offset tuning enabled', settings.offsetTuning));
+
+		if (newOT !== null && newOT === 1 || newOT === 0) {
+			set_setting('offsetTuning', newOT);
+		}
+	});
+	
+	$('#decimate-ctl').bind('click', (e) => {
+		const d = parseInt(prompt('Set decimation factor', settings.decimate));
+
+		if (d && d >= 2 || d <= 16) {
+			set_setting('decimate', d);
+		}
+	});
+
+	$('#frames-ctl').bind('click', (e) => {
+		const f = parseInt(prompt('Set raw data frames', settings.frames));
+
+		if (f && f >= 1 || f <= 16) {
+			set_setting('frames', f);
+		}
+	});
+
+	$('#trigger').bind('click', (e) => {
+		if (running) {
+			$(e.target).text('PLAY');
+			socket.emit('stopData');
+			running = false;
+		} else {
+			set_setting('resetBuffer', 1, null, () => {
+				$(e.target).text('PAUSE');
+				socket.emit('startData');
+				buffer.length = 0;
+				running = true;
+			});
+		}
+	});
+});
+</script>
+<style>
+	html, body {
+		font: normal 14pt sans-serif;
+	}
+	.content {
+		display: flex;
+		flex-direction: row;
+	}
+	.errors {
+		color: red;
+		padding: 1em;
+		margin: 15px;
+	}
+	.left {
+		background-color: blue;
+		padding: 15px;
+		flex-grow: 1;
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		color: white;
+	}
+	div#device {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: space-between;
+		font-family: monospace;
+		font-size: 80%;
+		border-bottom: 1px solid #ddd;
+	}
+	div #device .lbl > span {
+		font-weight: 700;
+		margin-left: 5px;
+	}
+	#settings {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+	}
+	#settings .input {
+		padding: 2px 5px;
+		margin: 5px 0;
+		min-width: 120px;
+		border-radius: 4px;
+		background: transparent;
+		color: white;
+		cursor: pointer;
+		outline: 0;
+	}
+	#settings .input:disabled {
+		opacity: 0.5;
+		cursor: default;
+	}
+	#settings .input:hover {
+		background: rgba(255,255,255,0.4);
+	}
+
+	.menu {
+		text-align: right;
+	}
+	.input .val {
+		padding: 4px;
+	}
+	.right {
+		background-color: green;
+	}
+	.footer {
+		margin: 0 15px;
+		padding: 15px;
+	}
+	.row {
+		margin-bottom: 5px;
+		display: flex;
+		justify-content: space-between;
+		color: white;
+	}
+	.row:last-child {
+		margin-bottom: 0;
+	}
+	.ind {
+		display: inline-block;
+		font-size: 80%;
+		border: 1px solid white;
+		border-radius: 4px;
+		padding: 2px 5px;
+		margin-right: 5px;
+	}
+	.ind > span {
+		margin-left: 5px;
+	}
+	.ovf-ind {
+		display: none;
+		font-weight: 700;
+		color: red
+	}
+	.plot-wrapper {
+		box-sizing: border-box;
+		width: 850px;
+		height: 450px;
+		padding: 15px 15px 15px;
+		margin: 15px 15px 0 15px;
+		border: 1px solid #ddd;
+		background: #fff;
+		background: linear-gradient(#f6f6f6 0, #fff 50px);
+		background: -o-linear-gradient(#f6f6f6 0, #fff 50px);
+		background: -ms-linear-gradient(#f6f6f6 0, #fff 50px);
+		background: -moz-linear-gradient(#f6f6f6 0, #fff 50px);
+		background: -webkit-linear-gradient(#f6f6f6 0, #fff 50px);
+		box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+		-o-box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+		-ms-box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+		-moz-box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+		-webkit-box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+	}
+	.plot-placeholder {
+		width: 100%;
+		height: 100%;
+		font-size: 14px;
+		line-height: 1.2em;
+	}
+</style>
+</head>
+<body>
+	<h1>PIMtector Receiver Tester</h1>
+
+	<div class='errors'></div>
+
+	<div class='content'>
+
+		<div class='col left'>
+
+			<div class='panel'>
+				<div id='device'>
+					<div class='lbl'>Vendor:<span id='vendor'></span></div>
+					<div class='lbl'>Product:<span id='product'></span></div>
+					<div class='lbl'>S/N:<span id='serial'></span></div>
+				</div>
+
+				<div id='settings'>
+					<button class='input' id='CF-ctl'>
+						<div class='lbl'>Center Frequency</span>
+						<div class='val'>&nbsp;</div>
+					</button>
+					<button class='input' id='averages-ctl'>
+						<div class='lbl'>Averages</span>
+						<div class='val'>&nbsp;</div>
+					</button>
+					<button class='input' id='offsetTuning-ctl'>
+						<div class='lbl'>Offset Tuning</span>
+						<div class='val'>&nbsp;</div>
+					</button>
+					<button class='input' id='decimate-ctl'>
+						<div class='lbl'>Decimation Factor</span>
+						<div class='val'>&nbsp;</div>
+					</button>
+					<button class='input' id='frames-ctl'>
+						<div class='lbl'>Raw Data Frames</span>
+						<div class='val'>&nbsp;</div>
+					</button>
+				</div>
+			</div>
+
+			<div class='menu'>
+				<button class='toggle' id='trigger'>PLAY</button>
+			</div>
+		</div>
+
+		<div class='col right'>
+			<div class='plot-wrapper'>
+				<div class='plot-placeholder' id='plot'></div>
+			</div>
+
+			<div class='footer'>
+				<div class='row'>
+					<div class='ind'>CF:<span id='CF-ind'></span></div>
+					<div class='ind'>Peak:<span id='peak-ind'></span></div>
+					<div class='ind'>Span:<span id='span-ind'></span></div>
+				</div>
+				<div class='row'>
+					<div class='ind'>RBW:<span id='rbw-ind'></span></div>
+					<div class='ind ovf-ind'>OVERFLOW</div>
+					<div class='ind'>N:<span id='N-ind'></span></div>
+				</div>
+			</div>
+		</div>
+
+	</div>
+</body>
+</html>
