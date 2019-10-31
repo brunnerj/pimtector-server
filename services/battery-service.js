@@ -37,6 +37,7 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 		this.max17048 = new Max17048();
 
 		this.name = 'battery_level';
+		this.level = new Buffer.from([ 0 ]);
 		this.updateDelay_ms = 30000; // how long to wait between battery level poll
 		
 		this.updateLevel(true);
