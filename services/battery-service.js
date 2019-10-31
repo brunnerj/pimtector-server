@@ -8,7 +8,7 @@ const Max17048 = require('./max17048');
 
 
 class BatteryLevelCharacteristic extends bleno.Characteristic {
-	constructor() {
+	constructor(logger) {
 		super({
 			uuid: '2a19',
 			properties: ['read', 'notify'],
@@ -32,6 +32,8 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 			]
 		});
 
+		this.logger = logger;
+
 		// init MAX17048 device
 		this.max17048 = new Max17048();
 
@@ -45,7 +47,7 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 
 		const prevLevel = this.level.readUInt8(0);
 		
-		console.log('Reading battery level');
+		this.logger.info('Reading battery level');
 
 		this.max17048.getStateOfCharge()
 			.then(soc => {
@@ -61,12 +63,12 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 				}
 			})
 			.catch(err => { 
-				console.error(err);
+				this.logger.error(err);
 			});
 	}
 
 	start() {
-		console.log('Starting battery service level monitor');
+		this.logger.info('Starting battery service level monitor');
 
 		this.updateLevel();
 
@@ -76,7 +78,7 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 	}
 
 	stop() {
-		console.log('Stopping battery service level monitor');
+		this.logger.info('Stopping battery service level monitor');
 
 		clearInterval(this.handle);
 		this.handle = null;
@@ -86,30 +88,30 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 		try {
 			//this.updateLevel(true); // force update level on read requests, but don't notify
 
-			console.log(`Returning battery result: ${this.level.toString('hex')} (${this.level.readUInt8(0)} %)`);
+			this.logger.info(`Returning battery result: ${this.level.toString('hex')} (${this.level.readUInt8(0)} %)`);
 
 			callback(this.RESULT_SUCCESS, this.level);
 
 		} catch (err) {
 
-			console.error(err);
+			this.logger.error(err);
 			callback(this.RESULT_UNLIKELY_ERROR);
 		}
 	}
 
 	onSubscribe(maxValueSize, updateValueCallback) {
-		console.log(`Battery level subscribed, max value size is ${maxValueSize}`);
+		this.logger.info(`Battery level subscribed, max value size is ${maxValueSize}`);
 		this.updateValueCallback = updateValueCallback;
 	}
 
 	onUnsubscribe() {
-		console.log('Battery level unsubscribed');
+		this.logger.info('Battery level unsubscribed');
 		this.updateValueCallback = null;
 	}
 
 	notify() {
 		if (this.updateValueCallback) {
-			console.log(`Sending battery level notification with level ${this.level.readUInt8(0)} %`);
+			this.logger.info(`Sending battery level notification with level ${this.level.readUInt8(0)} %`);
 
 			this.updateValueCallback(this.level);
 		}
@@ -119,9 +121,9 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 
 class BatteryService extends bleno.PrimaryService {
 
-	constructor() {
+	constructor(logger) {
 
-		const _level = new BatteryLevelCharacteristic();
+		const _level = new BatteryLevelCharacteristic(logger);
 
 		super({
 			uuid: '180f',

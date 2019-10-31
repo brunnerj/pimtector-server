@@ -1,7 +1,6 @@
 'use strict';
 
 const { window } = require('./window');
-const FFT = require('fft.js');
 
 const Fili = require('fili');
 const firCalculator = new Fili.FirCoeffs();

@@ -74,7 +74,7 @@ class FirmwareRevisionCharacteristic extends bleno.Characteristic {
 }
 
 class DeviceInformationService extends bleno.PrimaryService {
-	constructor() {
+	constructor(logger) {
 		super({
 			uuid: '180a',
 			characteristics: [

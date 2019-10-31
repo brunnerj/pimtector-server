@@ -8,7 +8,7 @@ const RECEIVER_CHAR_UUID	= '00010001-8d54-11e9-b475-0800200c9a66';
 
 
 class ReceiverCharacteristic extends bleno.Characteristic {
-	constructor() {
+	constructor(logger) {
 		super({
 			uuid: RECEIVER_CHAR_UUID,
 			properties: ['read'],
@@ -31,6 +31,7 @@ class ReceiverCharacteristic extends bleno.Characteristic {
 				})
 			]
 		});
+		this.logger = logger;
 	}
 
 	onReadRequest(offset, callback) {
@@ -39,13 +40,13 @@ class ReceiverCharacteristic extends bleno.Characteristic {
 			const result = new Buffer.alloc(2); // 2 bytes, 16 bits for int16
 			result.writeInt16LE(level);
 
-			console.log(`Returning receiver result: ${result.toString('hex')} (${level / 100} dBm)`);
+			this.logger.info(`Returning receiver result: ${result.toString('hex')} (${level / 100} dBm)`);
 
 			callback(this.RESULT_SUCCESS, result);
 
 		} catch (err) {
 
-			console.error(err);
+			this.logger.error(err);
 			callback(this.RESULT_UNLIKELY_ERROR);
 		}
 	}
@@ -53,11 +54,11 @@ class ReceiverCharacteristic extends bleno.Characteristic {
 
 
 class ReceiverService extends bleno.PrimaryService {
-	constructor() {
+	constructor(logger) {
 		super({
 			uuid: RECEIVER_SERVICE_UUID,
 			characteristics: [
-				new ReceiverCharacteristic()
+				new ReceiverCharacteristic(logger)
 			]
 		});
 	}
