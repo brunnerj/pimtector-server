@@ -37,9 +37,6 @@ app.use(function (req, res, next) {
 	next();
 })
 
-// Root request gets test page
-app.get('/', (req, res) => { res.sendFile(__dirname + '/receiver-test.html'); });
-
 // Read-only requests
 app.get('/info', (req, res) => { res.json(wrapResult('info', device.info())); });
 app.get('/gains', (req, res) => { res.json(wrapResult('gains', device.gains())); });
