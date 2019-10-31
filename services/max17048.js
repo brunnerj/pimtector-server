@@ -30,7 +30,7 @@ module.exports = class Max17048
 		i2c.Bus().open()
 			.then((bus) => {
 				this.device = i2c.Device({ address: address, bus});
-				logger.info(`[MAX17048] i2c device at ${address} opened`);
+				logger.info(`[MAX17048] battery fuel gauge at i2c address 0x${address.toString(16)} opened`);
 			})
 			.catch(err => { 
 				throw err; 
