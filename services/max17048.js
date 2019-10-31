@@ -23,11 +23,14 @@ const REGISTER_POR = 0xFE;
 
 module.exports = class Max17048
 {
-	constructor() {
+	constructor(logger) {
+
+		this.logger = logger;
 
 		i2c.Bus().open()
 			.then((bus) => {
 				this.device = i2c.Device({ address: address, bus});
+				logger.info(`[MAX17048] i2c device at ${address} opened`);
 			})
 			.catch(err => { 
 				throw err; 
@@ -35,6 +38,11 @@ module.exports = class Max17048
 	}
 
 	async readRegister(register) {
+
+		if (!this.device) {
+			this.logger.error('[MAX17048] attempt to read device before initialization');
+			return;
+		}
 
 		const swappedWord = await this.device.readWord(register);
 
@@ -57,8 +65,8 @@ module.exports = class Max17048
 		return register * 0.000078125;
 	}
 
-	// returns a value between 0 and 1, representing the charge of the battery, where 1 = fully charged and
-	// 0 = empty
+	// returns a value between 0 and 1, representing the charge of the battery,
+	// where 1 = fully charged and 0 = empty
 	async getStateOfCharge() {
 		const register = await this.readRegister(REGISTER_SOC);
 	

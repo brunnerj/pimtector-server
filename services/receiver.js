@@ -378,11 +378,11 @@ function startData(onData, onEnd, logger) {
 	}
 
 	function _onEnd() {
-		 if (logger) logger.info('[receiver.js] DAQ stopped');
+		 if (logger) logger.info('[receiver] DAQ stopped');
 		onEnd();
 	}
 
-	if (logger) logger.info('[receiver.js] DAQ starting');
+	if (logger) logger.info('[receiver] DAQ starting');
 	const code = rtlsdr.read_async(dev, _onData, _onEnd, settings.deviceBufs, settings.deviceBufLen);
 	if (code) return error(500, code);
 
