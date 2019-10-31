@@ -44,7 +44,7 @@ const receiverService = new ReceiverService(logger);
 
 const SERVER_APP_NAME = 'PIMtector';
 
-logger.info(`${SERVER_APP_NAME} starting BLE peripheral server...`);
+logger.info(`[ble-server] starting BLE peripheral server...`);
 
 
 const advertise = () => {
@@ -53,7 +53,7 @@ const advertise = () => {
 		deviceInformationService.uuid, 
 		batteryService.uuid 
 	], err => {
-		if (err) logger.error(err);
+		if (err) logger.error(`[ble-server] ${err}`);
 	});
 }
 
@@ -61,14 +61,14 @@ const advertise = () => {
 // Wait for power on to start advertising our services
 bleno.on('stateChange', state => {
 
-	logger.info(`[bleno] Adapter changed state to ${state}`);
+	logger.info(`[ble-server] Adapter changed state to ${state}`);
 
 	if (state === 'poweredOn') {
 		
 		advertise();
 
 	} else {
-		logger.info(`Stopping advertising since state is ${state} (instead of poweredOn).`);
+		logger.info(`[ble-server] Stopping advertising since state is ${state} (instead of poweredOn).`);
 		bleno.stopAdvertising();
 	}
 });
@@ -76,14 +76,14 @@ bleno.on('stateChange', state => {
 
 // Configure the services when advertising starts
 bleno.on('advertisingStart', err => {
-	logger.info('[bleno] advertisingStart')
+	logger.info('[ble-server] advertisingStart')
 
 	if(err) {
-		logger.error(err);
+		logger.error(`[ble-server] ${err}`);
 		return;
 	}
 
-	logger.info('Configuring services');
+	logger.info('[ble-server] Configuring services');
 	
 	bleno.setServices([
 		batteryService,
@@ -91,24 +91,24 @@ bleno.on('advertisingStart', err => {
 		receiverService
 	], err => {
 		if(err)
-			logger.error(err);
+			logger.error(`[ble-server] ${err}`);
 		else
-			logger.info('Services configured');
+			logger.info('[ble-server] Services configured');
 	});
 });
 
 // diagnostic messages
-bleno.on('advertisingStartError', err => logger.error('[bleno] advertisingStartError'));
-bleno.on('advertisingStop', err => logger.info('[bleno] advertisingStop'));
+bleno.on('advertisingStartError', err => logger.error('[ble-server] advertisingStartError'));
+bleno.on('advertisingStop', err => logger.info('[ble-server] advertisingStop'));
 
-bleno.on('servicesSet', err => logger.info('[bleno] servicesSet'));
-bleno.on('servicesSetError', err => logger.info('[bleno] servicesSetError'));
+bleno.on('servicesSet', err => logger.info('[ble-server] servicesSet'));
+bleno.on('servicesSetError', err => logger.info('[ble-server] servicesSetError'));
 
 
 // Notify the log that we've accepted a connection
 // and stop advertising
 bleno.on('accept', function(clientAddress) {
-	logger.info(`[bleno] accept ${clientAddress}`);
+	logger.info(`[ble-server] accept ${clientAddress}`);
 	bleno.stopAdvertising();
 	batteryService.start(); // start battery service updates
 });
@@ -117,7 +117,7 @@ bleno.on('accept', function(clientAddress) {
 // Notify the log that we have disconnected from a client
 // and start advertising
 bleno.on('disconnect', function(clientAddress) {
-	logger.info(`[bleno] disconnect ${clientAddress}`);
+	logger.info(`[ble-server] disconnect ${clientAddress}`);
 	batteryService.stop(); // stop battery service updates
 	advertise();
 });

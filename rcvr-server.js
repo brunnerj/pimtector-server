@@ -23,7 +23,7 @@ const wrapResult = (command, result) => {
 };
 
 const log = (msg) => {
-	logger.info(`${msg}`);
+	logger.info(`[rcvr-server] ${msg}`);
 }
 
 app.use(express.static('public'));
@@ -173,7 +173,7 @@ io.on('connection', (socket) => {
 
 		buffer.length = 0;
 		if (device.startData(onStreamData, onStreamEnd)) {
-			logger.error('Error starting data stream');
+			logger.error('[rcvr-server] Error starting data stream');
 		} else {
 			running = true;
 		}
@@ -185,7 +185,7 @@ io.on('connection', (socket) => {
 		if (!running) return;
 
 		if (device.stopData()) {
-			logger.error('Error stopping data stream');
+			logger.error('[rcvr-server] Error stopping data stream');
 
 			onStreamEnd();
 		}
