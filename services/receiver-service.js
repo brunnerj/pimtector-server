@@ -40,13 +40,13 @@ class ReceiverCharacteristic extends bleno.Characteristic {
 			const result = new Buffer.alloc(2); // 2 bytes, 16 bits for int16
 			result.writeInt16LE(level);
 
-			this.logger.info(`Returning receiver result: ${result.toString('hex')} (${level / 100} dBm)`);
+			this.logger.info(`[receiver-service] Returning receiver result: ${result.toString('hex')} (${level / 100} dBm)`);
 
 			callback(this.RESULT_SUCCESS, result);
 
 		} catch (err) {
 
-			this.logger.error(err);
+			this.logger.error(`[receiver-service] ${err}`);
 			callback(this.RESULT_UNLIKELY_ERROR);
 		}
 	}

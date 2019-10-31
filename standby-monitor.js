@@ -57,11 +57,11 @@ const halt = () => {
 		// turn status off
 		status.writeSync(Gpio.LOW);
 
-		logger.info('halting');
+		logger.info('[standby-monitor] halting');
 
 		// execute halt command
 		exec('shutdown -h now', (msg) => { 
-			logger.info(msg); 
+			logger.info(`[standby-monitor] ${msg}`); 
 		});
 
 	}, 500);
@@ -71,7 +71,7 @@ const halt = () => {
 const standbyDetector = (err) => {
 
 	if (err) {
-		logger.error('Error calling standbyDetector: ' + err);
+		logger.error(`[standby-monitor] Error calling standbyDetector: ${err}`);
 		throw err;
 	}
 
@@ -98,7 +98,7 @@ const standbyDetector = (err) => {
 const lboDetector = (err) => {
 
 	if (err) {
-		logger.error('Error calling lboDetector: ' + err);
+		logger.error(`[standby-monitor] Error calling lboDetector: ${err}`);
 		throw err;
 	}
 
@@ -106,7 +106,7 @@ const lboDetector = (err) => {
 	if (lbo.readSync() === Gpio.HIGH)
 		return;
 
-	logger.info('low battery detected');
+	logger.info('[standby-monitor] low battery detected');
 
 	let start_ms = Date.now();
 	let halting = false;
@@ -119,7 +119,7 @@ const lboDetector = (err) => {
 	if (halting) {
 		halt();
 	} else {
-		logger.info('low battery reset');
+		logger.info('[standby-monitor] low battery reset');
 	}
 }
 
@@ -129,16 +129,16 @@ const lboDetector = (err) => {
 status.writeSync(Gpio.HIGH);
 
 // watch the standby button GPIO interrupt
-logger.info('standby detection starting');
+logger.info('[standby-monitor] standby detection starting');
 button.watch(standbyDetector);
 
 // watch for the LBO signal interrupt
-logger.info('LBO detection starting');
+logger.info('[standby-monitor] LBO detection starting');
 lbo.watch(lboDetector);
 
 // listen for system signals and cleanup
 ['SIGINT', 'SIGTERM', 'SIGHUP'].forEach(signal => process.on(signal, () => {
-	logger.info(signal + ' detected - exiting');
+	logger.info(`[standby-monitor] ${signal} detected - exiting`);
 	status.unexport();
 	button.unexport();
 	lbo.unexport();

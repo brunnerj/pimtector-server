@@ -6,7 +6,6 @@ const bleno = require('bleno');
 // MAX17048 LiPo battery fuel gauge (uses I2C)
 const Max17048 = require('./max17048');
 
-
 class BatteryLevelCharacteristic extends bleno.Characteristic {
 	constructor(logger) {
 		super({
@@ -47,7 +46,7 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 
 		const prevLevel = this.level.readUInt8(0);
 		
-		this.logger.info('Reading battery level');
+		this.logger.info('[battery-service] Reading battery level');
 
 		this.max17048.getStateOfCharge()
 			.then(soc => {
@@ -63,12 +62,12 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 				}
 			})
 			.catch(err => { 
-				this.logger.error(err);
+				this.logger.error(`[battery-service] ${err}`);
 			});
 	}
 
 	start() {
-		this.logger.info('Starting battery service level monitor');
+		this.logger.info('[battery-service] Starting battery service level monitor');
 
 		this.updateLevel();
 
@@ -78,7 +77,7 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 	}
 
 	stop() {
-		this.logger.info('Stopping battery service level monitor');
+		this.logger.info('[battery-service] Stopping battery service level monitor');
 
 		clearInterval(this.handle);
 		this.handle = null;
@@ -88,30 +87,30 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 		try {
 			//this.updateLevel(true); // force update level on read requests, but don't notify
 
-			this.logger.info(`Returning battery result: ${this.level.toString('hex')} (${this.level.readUInt8(0)} %)`);
+			this.logger.info(`[battery-service] Returning battery result: ${this.level.toString('hex')} (${this.level.readUInt8(0)} %)`);
 
 			callback(this.RESULT_SUCCESS, this.level);
 
 		} catch (err) {
 
-			this.logger.error(err);
+			this.logger.error(`[battery-service] ${err}`);
 			callback(this.RESULT_UNLIKELY_ERROR);
 		}
 	}
 
 	onSubscribe(maxValueSize, updateValueCallback) {
-		this.logger.info(`Battery level subscribed, max value size is ${maxValueSize}`);
+		this.logger.info(`[battery-service] Battery level subscribed, max value size is ${maxValueSize}`);
 		this.updateValueCallback = updateValueCallback;
 	}
 
 	onUnsubscribe() {
-		this.logger.info('Battery level unsubscribed');
+		this.logger.info('[battery-service] Battery level unsubscribed');
 		this.updateValueCallback = null;
 	}
 
 	notify() {
 		if (this.updateValueCallback) {
-			this.logger.info(`Sending battery level notification with level ${this.level.readUInt8(0)} %`);
+			this.logger.info(`[battery-service] Sending battery level notification with level ${this.level.readUInt8(0)} %`);
 
 			this.updateValueCallback(this.level);
 		}
