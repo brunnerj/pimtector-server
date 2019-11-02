@@ -57,11 +57,17 @@ const halt = () => {
 		// turn status off
 		status.writeSync(Gpio.LOW);
 
+		// turn USB/WiFi off
+		// see https://www.raspberrypi.org/forums/viewtopic.php?t=134351
+		exec('echo 0 | tee /sys/devices/platform/soc/20980000.usb/buspower > /dev/null', (msg) => {
+			logger.info(`[standby-monitor] exec USB power off: ${msg}`);
+		});
+
 		logger.info('[standby-monitor] halting');
 
 		// execute halt command
 		exec('shutdown -h now', (msg) => { 
-			logger.info(`[standby-monitor] ${msg}`); 
+			logger.info(`[standby-monitor] exec halt: ${msg}`); 
 		});
 
 	}, 500);
@@ -127,6 +133,11 @@ const lboDetector = (err) => {
 // boot, so it may blink off during init above
 // until we set it back high here)
 status.writeSync(Gpio.HIGH);
+
+// turn HDMI off
+exec('/usr/bin/tvservice -o', (msg) => {
+	logger.info(`[standby-monitor] exec HDMI power off: ${msg}`);
+});
 
 // watch the standby button GPIO interrupt
 logger.info('[standby-monitor] standby detection starting');
