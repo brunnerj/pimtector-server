@@ -70,7 +70,7 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 
 		this.updateLevel();
 
-		this.handle = setInterval(async () => { 
+		this.handle = setInterval(() => { 
 			this.updateLevel();
 		}, this.updateDelay_ms);
 	}
@@ -84,7 +84,7 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 
 	onReadRequest(offset, callback) {
 		try {
-			//this.updateLevel(true); // force update level on read requests, but don't notify
+			this.updateLevel(true); // force update level on read requests, but don't notify
 
 			this.logger.info(`[battery-service] Returning battery result: ${this.level.toString('hex')} (${this.level.readUInt8(0)} %)`);
 
@@ -109,7 +109,7 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 
 	notify() {
 		if (this.updateValueCallback) {
-			this.logger.info(`[battery-service] Sending battery level notification with level ${this.level.readUInt8(0)} %`);
+			this.logger.info(`[battery-service] Sending battery level notification with level ${this.level.readUInt8(0)}%`);
 
 			this.updateValueCallback(this.level);
 		}

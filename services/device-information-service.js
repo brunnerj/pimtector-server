@@ -84,6 +84,8 @@ class DeviceInformationService extends bleno.PrimaryService {
 				new FirmwareRevisionCharacteristic()
 			]
 		});
+
+		this.name = 'device_information_service';
 	}
 }
 
