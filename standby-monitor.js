@@ -13,7 +13,9 @@
  * initialized, but will be set 'on' before the monitoring loop starts.
  * 
  * The standby button must be held for a bit before the event is
- * registered. See the constants below to fine tune the operation.
+ * registered. See the constants below to fine tune the operation.  User
+ * will see the blue status LED blink a few times when shutdown is
+ * recognized.
  * 
  * This program is started via the standby-monitor service routine
  * which gets installed (copied) to /etc/init.d/.
@@ -27,6 +29,7 @@ const logger = require('./logging');
 const STANDBY_HOLD_TIME_ms = 1000; // button must be held this long to signal standby
 const LBO_HOLD_TIME_ms = 60000; // LBO detected for 1 minute for shutdown
 
+const GPIO_RX_EN = 13; // Enable/disable the receiver (RX) USB power bus (GPIO PIN33 == GPIO13)
 const GPIO_STATUS = 14; // write 1 for on, 0 for off (GPIO PIN 8 == GPIO14/UART0_TXD)
 const GPIO_BUTTON = 22; // detect falling edge on GPIO22 (GPIO PIN 15 == GPIO22)
 const GPIO_LBO_DETECT = 4; // detect low battery output - active low (GPIO PIN 7 == GPIO4)
@@ -34,6 +37,7 @@ const GPIO_CHARGE_DETECT = 5; // detect battery charging - active low (GPIO PIN 
 const GPIO_FULL_DETECT = 6; // detect battery full - active low (GPIO PIN 31 == GPIO6)
 
 // Set up the status LED and standby button
+const rcvr_en = new Gpio(GPIO_RX_EN, 'out');
 const status = new Gpio(GPIO_STATUS, 'out');
 const button = new Gpio(GPIO_BUTTON, 'in', 'falling', { debounceTimeout: 50 });
 const lbo = new Gpio(GPIO_LBO_DETECT, 'in', 'falling', { debounceTimeout: 10 });
@@ -57,12 +61,9 @@ const halt = () => {
 		// turn status off
 		status.writeSync(Gpio.LOW);
 
-		// turn USB/WiFi off
-		// see https://www.raspberrypi.org/forums/viewtopic.php?t=134351
-		exec('echo 0 | tee /sys/devices/platform/soc/20980000.usb/buspower > /dev/null', (msg) => {
-			logger.info(`[standby-monitor] exec USB power off: ${msg}`);
-		});
-
+		// turn receiver USB power off
+		rcvr_en.writeSync(Gpio.LOW);
+		
 		logger.info('[standby-monitor] halting');
 
 		// execute halt command
@@ -129,15 +130,19 @@ const lboDetector = (err) => {
 	}
 }
 
-// Illuminate status LED (it should be high at
-// boot, so it may blink off during init above
-// until we set it back high here)
-status.writeSync(Gpio.HIGH);
-
 // turn HDMI off
 exec('/usr/bin/tvservice -o', (msg) => {
 	logger.info(`[standby-monitor] exec HDMI power off: ${msg}`);
 });
+
+// disable receiver USB power bus on startup
+// the receiver will get enabled on user connect
+rcvr_en.writeSync(Gpio.LOW);
+
+// Illuminate status LED (it should be high at
+// boot, so it may blink off during init above
+// until we set it back high here)
+status.writeSync(Gpio.HIGH);
 
 // watch the standby button GPIO interrupt
 logger.info('[standby-monitor] standby detection starting');
@@ -150,6 +155,7 @@ lbo.watch(lboDetector);
 // listen for system signals and cleanup
 ['SIGINT', 'SIGTERM', 'SIGHUP'].forEach(signal => process.on(signal, () => {
 	logger.info(`[standby-monitor] ${signal} detected - exiting`);
+	rcvr_en.unexport();
 	status.unexport();
 	button.unexport();
 	lbo.unexport();
