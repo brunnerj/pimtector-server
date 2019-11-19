@@ -44,6 +44,7 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 		this.buffer = new Buffer.alloc(2);
 		this.buffer.writeInt16LE(-13000);
 
+		this.previous = null;
 	}
 
 	onReadRequest(offset, callback) {
@@ -63,9 +64,20 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 
 	updateBuffer(suppressNotify) {
 
-		const level = -1 * (Math.floor(Math.random() * (13000 - 8000 + 1)) + 8000); // fake level between -130 and -80 dBm (-13000 to -8000)
-
-		this.buffer.writeInt16LE(level);
+		let min = -130;
+		let max = -80;
+		let noise = 1.5;
+	
+		if (this.previous) {
+			min = Math.max(min, this.previous - noise);
+			max = Math.min(max, this.previous + noise);
+		}
+	
+		const p = Math.random() * (max - min) + min;
+	
+		this.previous = Math.max(Math.min(p, max), min);
+	
+		this.buffer.writeInt16LE(this.previous * 100);
 
 		if (!suppressNotify) {
 			this.notify();
