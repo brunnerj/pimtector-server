@@ -110,7 +110,10 @@ bleno.on('servicesSetError', err => logger.info('[ble-server] servicesSetError')
 bleno.on('accept', function(clientAddress) {
 	logger.info(`[ble-server] accept ${clientAddress}`);
 	bleno.stopAdvertising();
-	batteryService.start(); // start battery service updates
+
+	// start battery and receiver service updates
+	batteryService.start(); 
+	receiverService.start();
 });
 
 
@@ -118,6 +121,11 @@ bleno.on('accept', function(clientAddress) {
 // and start advertising
 bleno.on('disconnect', function(clientAddress) {
 	logger.info(`[ble-server] disconnect ${clientAddress}`);
-	batteryService.stop(); // stop battery service updates
+
+	// stop battery and receiver service updates
+	batteryService.stop(); 
+	receiverService.stop();
+
+	// start advertising BLE
 	advertise();
 });

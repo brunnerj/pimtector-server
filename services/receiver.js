@@ -15,7 +15,7 @@ const settings = {
 	adcBits: 8, // ADC bit width
 	adcFullscaleVolts: 2, // ADC full scale Vpeak-to-peak
 
-	N: 2**15, // number of I/Q points used to process ADC raw data for each frame
+	N: 2**13, // number of I/Q points used to process ADC raw data for each frame
 	Fs: 2.56e6, // ADC sample rate, Hz
 
 	frames: 4, // ADC buffer is split into this many frames
@@ -405,7 +405,6 @@ module.exports = {
 	// Settings are read/write
 	settings: settings,
 
-
 	// READ-ONLY
 	info: info,
 	gains: gains,
@@ -425,8 +424,4 @@ module.exports = {
 	// ACQUISITION
 	startData: startData,
 	stopData: stopData
-
 }
-
-
-
