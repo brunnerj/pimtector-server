@@ -86,7 +86,9 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 		try {
 			this.updateLevel(true); // force update level on read requests, but don't notify
 
-			this.logger.info(`[battery-service] Returning battery result: ${this.level.toString('hex')} (${this.level.readUInt8(0)} %)`);
+			const level = this.level.readUInt8(0);
+
+			this.logger.info(`[battery-service] Returning battery result: <0x${level.toString(16).padStart(2, '0')}> ${level}%`);
 
 			callback(this.RESULT_SUCCESS, this.level);
 

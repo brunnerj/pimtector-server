@@ -52,7 +52,7 @@ class ReceiverCenterFreqCharacteristic extends bleno.Characteristic {
 			
 			const fo = this.Fo.readInt16LE(0);
 
-			this.logger.info(`[receiver-service] Returning receiver center frequency: <${fo.toString('hex')}> (${fo / 10} MHz)`);
+			this.logger.info(`[receiver-service] Returning receiver center frequency: <0x${fo.toString(16).padStart(4, '0')}> ${fo / 10} MHz`);
 
 			callback(this.RESULT_SUCCESS, this.Fo);
 
@@ -102,7 +102,7 @@ class ReceiverSpanCharacteristic extends bleno.Characteristic {
 			
 			const span = this.span.readInt16LE(0);
 
-			this.logger.info(`[receiver-service] Returning receiver span: <${span.toString('hex')}> (${span / 10} kHz)`);
+			this.logger.info(`[receiver-service] Returning receiver span: <0x${span.toString(16).padStart(4, '0')}> ${span / 10} kHz`);
 
 			callback(this.RESULT_SUCCESS, this.span);
 
@@ -153,7 +153,7 @@ class ReceiverPointsCharacteristic extends bleno.Characteristic {
 			
 			const N = this.points.readInt16LE(0);
 
-			this.logger.info(`[receiver-service] Returning receiver points: <${N.toString('hex')}> (${N} points)`);
+			this.logger.info(`[receiver-service] Returning receiver points: <0x${N.toString(16).padStart(4, '0')}> (${N} points)`);
 
 			callback(this.RESULT_SUCCESS, this.points);
 
