@@ -9,8 +9,162 @@ const GPIO_RX_EN = 13; // Enable/disable the receiver (RX) USB power bus (GPIO P
 const rcvr_en = new Gpio(GPIO_RX_EN, 'out');
 const rx_pwr = (enable) => { rcvr_en.writeSync(enable ? Gpio.HIGH : Gpio.LOW) }
 
-const RECEIVER_SERVICE_UUID		= '00010000-8d54-11e9-b475-0800200c9a66';
-const RECEIVER_DATA_CHAR_UUID	= '00010001-8d54-11e9-b475-0800200c9a66';
+const RECEIVER_SERVICE_UUID				= '00010000-8d54-11e9-b475-0800200c9a66';
+const RECEIVER_DATA_CHAR_UUID			= '00010001-8d54-11e9-b475-0800200c9a66';
+const RECEIVER_CENTER_FREQ_CHAR_UUID	= '00010002-8d54-11e9-b475-0800200c9a66';
+const RECEIVER_SPAN_CHAR_UUID			= '00010003-8d54-11e9-b475-0800200c9a66';
+const RECEIVER_POINTS_CHAR_UUID			= '00010004-8d54-11e9-b475-0800200c9a66';
+
+class ReceiverCenterFreqCharacteristic extends bleno.Characteristic {
+	constructor(logger) {
+		super({
+			uuid: RECEIVER_CENTER_FREQ_CHAR_UUID,
+			properties: ['read', 'write'],
+			descriptors: [
+				new bleno.Descriptor({
+					uuid: '2901',
+					value: 'Receiver center frequency, Hz'
+				}),
+				new bleno.Descriptor({
+					uuid: '2904',
+					value: new Buffer.from([ 
+						0x06, // format = uint16 (0 to 65,535)
+						0x05, // exponent = 5 (0 to 6,553,500,000 Hz)
+						0x22, // 0x2722: unit = Hz
+						0x27,
+						0x01, // Bluetooth SIG namespace
+						0x00, // 0x0000: no description
+						0x00 
+					])
+				})
+			]
+		});
+
+		this.logger = logger;
+		this.name = 'receiver_center_freq';
+		
+		this.Fo = new Buffer.alloc(2); // 2-byte buffer for Fo, MHz
+		this.Fo.writeInt16LE(7000); // 700.0 MHz
+	}
+
+	onReadRequest(offset, callback) {
+		try {
+			
+			const fo = this.Fo.readInt16LE(0);
+
+			this.logger.info(`[receiver-service] Returning receiver center frequency: <${fo.toString('hex')}> (${fo / 10} MHz)`);
+
+			callback(this.RESULT_SUCCESS, this.Fo);
+
+		} catch (err) {
+
+			this.logger.error(`[receiver-service] ${err}`);
+			callback(this.RESULT_UNLIKELY_ERROR);
+		}
+	}
+
+}
+
+class ReceiverSpanCharacteristic extends bleno.Characteristic {
+	constructor(logger) {
+		super({
+			uuid: RECEIVER_SPAN_CHAR_UUID,
+			properties: ['read', 'write'],
+			descriptors: [
+				new bleno.Descriptor({
+					uuid: '2901',
+					value: 'Receiver span frequency, Hz'
+				}),
+				new bleno.Descriptor({
+					uuid: '2904',
+					value: new Buffer.from([ 
+						0x06, // format = uint16 (0 to 65,535)
+						0x02, // exponent = 2 (0 to 6,553,500 Hz)
+						0x22, // 0x2722: unit = Hz
+						0x27,
+						0x01, // Bluetooth SIG namespace
+						0x00, // 0x0000: no description
+						0x00 
+					])
+				})
+			]
+		});
+
+		this.logger = logger;
+		this.name = 'receiver_span';
+		
+		this.span = new Buffer.alloc(2); // 2-byte buffer for span
+		this.span.writeInt16LE(1600); // 160 kHz
+	}
+
+	onReadRequest(offset, callback) {
+		try {
+			
+			const span = this.span.readInt16LE(0);
+
+			this.logger.info(`[receiver-service] Returning receiver span: <${span.toString('hex')}> (${span / 10} kHz)`);
+
+			callback(this.RESULT_SUCCESS, this.span);
+
+		} catch (err) {
+
+			this.logger.error(`[receiver-service] ${err}`);
+			callback(this.RESULT_UNLIKELY_ERROR);
+		}
+	}
+
+}
+
+
+class ReceiverPointsCharacteristic extends bleno.Characteristic {
+	constructor(logger) {
+		super({
+			uuid: RECEIVER_POINTS_CHAR_UUID,
+			properties: ['read'],
+			descriptors: [
+				new bleno.Descriptor({
+					uuid: '2901',
+					value: 'Receiver number of data points'
+				}),
+				new bleno.Descriptor({
+					uuid: '2904',
+					value: new Buffer.from([ 
+						0x06, // format = uint16 (0 to 65,535)
+						0x00, // exponent = 0 (0 to 65,535 points)
+						0x00, // 0x2700: unitless
+						0x27,
+						0x01, // Bluetooth SIG namespace
+						0x00, // 0x0000: no description
+						0x00 
+					])
+				})
+			]
+		});
+
+		this.logger = logger;
+		this.name = 'receiver_points';
+		
+		this.points = new Buffer.alloc(2); // 2-byte buffer for span
+		this.points.writeInt16LE(256); // 256 points
+	}
+
+	onReadRequest(offset, callback) {
+		try {
+			
+			const N = this.points.readInt16LE(0);
+
+			this.logger.info(`[receiver-service] Returning receiver points: <${N.toString('hex')}> (${N} points)`);
+
+			callback(this.RESULT_SUCCESS, this.points);
+
+		} catch (err) {
+
+			this.logger.error(`[receiver-service] ${err}`);
+			callback(this.RESULT_UNLIKELY_ERROR);
+		}
+	}
+
+}
 
 
 class ReceiverDataCharacteristic extends bleno.Characteristic {
@@ -22,18 +176,6 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 				new bleno.Descriptor({
 					uuid: '2901',
 					value: 'Received power in decibels above 1mW reference, dBm'
-				}),
-				new bleno.Descriptor({
-					uuid: '2904',
-					value: new Buffer.from([ 
-						0x0E, // format = int16 (-32,768 to 32,767)
-						0xFE, // exponent = -2 (-327.68 to 327.67)
-						0x26, // 0x2726: unit = watt (power)
-						0x27,
-						0x01, // Bluetooth SIG namespace
-						0x00, // 0x0000: no description
-						0x00 
-					])
 				})
 			]
 		});
@@ -83,14 +225,14 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 	}
 
 	start() {
-		this.logger.info('[receiver-service] Starting receiver service');
+		this.logger.info('[receiver-service] Starting receiver data characteristic');
 
 		// enable the receiver power bus
 		rx_pwr(true);
 	}
 
 	stop() {
-		this.logger.info('[receiver-service] Stopping receiver service');
+		this.logger.info('[receiver-service] Stopping receiver data characteristic');
 
 		if (this.handle) 
 			this.onUnsubscribe();
@@ -129,23 +271,29 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 class ReceiverService extends bleno.PrimaryService {
 	constructor(logger) {
 
-		const _rcvr = new ReceiverDataCharacteristic(logger);
+		const _rcvrData = new ReceiverDataCharacteristic(logger);
+		const _rcvrCenterFreq = new ReceiverCenterFreqCharacteristic(logger);
+		const _rcvrSpan = new ReceiverSpanCharacteristic(logger);
+		const _rcvrPoints = new ReceiverPointsCharacteristic(logger);
 
 		super({
 			uuid: RECEIVER_SERVICE_UUID,
-			characteristics: [ _rcvr ]
+			characteristics: [ _rcvrData, _rcvrCenterFreq, _rcvrSpan, _rcvrPoints ]
 		});
 
 		this.name = 'receiver_service';
-		this.rcvr = _rcvr;
+		this.rcvrData = _rcvrData;
+		this.rcvrCenterFreq = _rcvrCenterFreq;
+		this.rcvrSpan = _rcvrSpan;
+		this.rcvrPoints = _rcvrPoints;
 	}
 
 	start() { 
-		this.rcvr.start();
+		this.rcvrData.start();
 	}
 
 	stop() { 
-		this.rcvr.stop(); 
+		this.rcvrData.stop();
 	}
 }
 
