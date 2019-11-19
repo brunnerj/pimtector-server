@@ -6,6 +6,22 @@ const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
+
+let rx_pwr = (enable) => {}; // NOP unless we're on a RPi (linux)
+if (process.platform === 'linux') {
+
+	// use GPIO13 to enable/disable the receiver
+	// USB power bus on user connect/disconnect
+	const Gpio = require('onoff').Gpio;
+	const GPIO_RX_EN = 13; // Enable/disable the receiver (RX) USB power bus (GPIO PIN33 == GPIO13)
+	const rcvr_en = new Gpio(GPIO_RX_EN, 'out');
+
+	rx_pwr = (enable) => {
+		rcvr_en.writeSync(enable ? Gpio.HIGH : Gpio.LOW);
+	}
+
+}
+
 const logger = require('./logging');
 
 const device = require('./services/receiver');
@@ -153,10 +169,16 @@ io.on('connection', (socket) => {
 		log('Data stream stopped')
 	}
 
+	// enable receiver when user connected
+	rx_pwr(true);
+
 	log('user connected');
 	connection = true;
 
 	socket.on('disconnect', () => {
+		// disable receiver when user disconnected
+		rx_pwr(false);
+		
 		log('user disconnected');
 		connection = false;
 		running = false;
