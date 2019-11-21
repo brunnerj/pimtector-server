@@ -45,8 +45,6 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 
 		const prevLevel = this.level.readUInt8(0);
 		
-		this.logger.info('[battery-service] Reading battery level');
-
 		this.max17048.getStateOfCharge()
 			.then(soc => {
 				
@@ -111,7 +109,7 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 
 	notify() {
 		if (this.updateValueCallback) {
-			this.logger.info(`[battery-service] Sending battery level notification with level ${this.level.readUInt8(0)}%`);
+			this.logger.info(`[battery-service] Sending battery level notification: ${this.level.readUInt8(0)}%`);
 
 			this.updateValueCallback(this.level);
 		}
