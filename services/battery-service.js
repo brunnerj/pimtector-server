@@ -1,7 +1,7 @@
 'use strict';
 
 // BLE library
-const bleno = require('bleno');
+const bleno = require('@abandonware/bleno');
 
 // MAX17048 LiPo battery fuel gauge (uses I2C)
 const Max17048 = require('./max17048');

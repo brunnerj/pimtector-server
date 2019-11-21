@@ -27,7 +27,7 @@
  *			- Descriptor: Characteristic Presentation Format (16bit int, decibel)
  */
 
-const bleno = require('bleno');
+const bleno = require('@abandonware/bleno');
 
 const logger = require('./logging');
 

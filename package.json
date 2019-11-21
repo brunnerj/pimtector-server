@@ -25,7 +25,7 @@
   "homepage": "https://github.com/brunnerj/pimtector-server#readme",
   "dependencies": {
     "async-i2c-bus": "^1.1.0",
-    "bleno": "^0.5.0",
+    "@abandonware/bleno": "^0.5.1-1",
     "express": "^4.17.1",
     "fft.js": "^4.0.3",
     "fili": "^2.0.3",

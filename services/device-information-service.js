@@ -1,6 +1,6 @@
 'use strict';
 
-const bleno = require('bleno');
+const bleno = require('@abandonware/bleno');
 
 
 const MANUFACTURER = 'Brunner Technical Services LLC';
