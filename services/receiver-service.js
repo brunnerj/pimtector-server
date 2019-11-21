@@ -31,7 +31,7 @@ class ReceiverInfoCharacteristic extends bleno.Characteristic {
 				}),
 				new bleno.Descriptor({
 					uuid: '2904',
-					value: new Buffer.from([ 
+					value: Buffer.from([ 
 						0x19, // UTF-8 string
 						0x00, // 
 						0x00, // 2700 = unitless
@@ -53,19 +53,21 @@ class ReceiverInfoCharacteristic extends bleno.Characteristic {
 			const info = receiver.info(); // { vendor, product, serial }
 
 			if (typeof info === 'string') {
-				throw info;
+				this.logger.error(`[receiver-service] ${info}`);
+				callback(this.RESULT_SUCCESS, Buffer.from(info, 'utf8'));
+				return;
 			}
 
 			const infoStr = `${info.vendor},${info.product},${info.serial}`;
 
 			this.logger.info(`[receiver-service] Returning receiver information: '${infoStr}'`);
 
-			callback(this.RESULT_SUCCESS, new Buffer(infoStr));
+			callback(this.RESULT_SUCCESS, Buffer.from(infoStr, 'utf8'));
 
 		} catch (err) {
 
 			this.logger.error(`[receiver-service] ${err}`);
-			callback(this.RESULT_UNLIKELY_ERROR, err);
+			callback(this.RESULT_UNLIKELY_ERROR);
 		}
 	}
 
@@ -106,7 +108,7 @@ class ReceiverCenterFreqCharacteristic extends bleno.Characteristic {
 		try {
 			
 			const fo = receiver.frequency(); // Hz
-			const fo_buf = new Buffer.alloc(2);
+			const fo_buf = Buffer.alloc(2);
 
 			fo_buf.writeInt16LE(fo / 1e5); // MHz * 10
 
@@ -163,7 +165,7 @@ class ReceiverSpanCharacteristic extends bleno.Characteristic {
 				}),
 				new bleno.Descriptor({
 					uuid: '2904',
-					value: new Buffer.from([ 
+					value: Buffer.from([ 
 						0x06, // format = uint16 (0 to 65,535)
 						0x02, // exponent = 2 (0 to 6,553,500 Hz)
 						0x22, // 0x2722: unit = Hz
@@ -179,7 +181,7 @@ class ReceiverSpanCharacteristic extends bleno.Characteristic {
 		this.logger = logger;
 		this.name = 'receiver_span';
 		
-		this.span = new Buffer.alloc(2); // 2-byte buffer for span
+		this.span = Buffer.alloc(2); // 2-byte buffer for span
 		this.span.writeInt16LE(1600); // 160 kHz
 	}
 
@@ -213,7 +215,7 @@ class ReceiverPointsCharacteristic extends bleno.Characteristic {
 				}),
 				new bleno.Descriptor({
 					uuid: '2904',
-					value: new Buffer.from([ 
+					value: Buffer.from([ 
 						0x06, // format = uint16 (0 to 65,535)
 						0x00, // exponent = 0 (0 to 65,535 points)
 						0x00, // 0x2700: unitless
@@ -229,7 +231,7 @@ class ReceiverPointsCharacteristic extends bleno.Characteristic {
 		this.logger = logger;
 		this.name = 'receiver_points';
 		
-		this.points = new Buffer.alloc(2); // 2-byte buffer for span
+		this.points = Buffer.alloc(2); // 2-byte buffer for span
 		this.points.writeInt16LE(256); // 256 points
 	}
 
@@ -267,7 +269,7 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 		this.logger = logger;
 		this.name = 'receiver_data';
 
-		this.buffer = new Buffer.alloc(2); // 2-byte buffer for 16 bit Int
+		this.buffer = Buffer.alloc(2); // 2-byte buffer for 16 bit Int
 		this.buffer.writeInt16LE(-13000); // start at -130 dBm
 	}
 

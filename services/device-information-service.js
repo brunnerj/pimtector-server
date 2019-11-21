@@ -14,7 +14,7 @@ class ManufacturerNameCharacteristic extends bleno.Characteristic {
 		super({
 			uuid: '2a29',
 			properties: ['read'],
-			value: new Buffer(MANUFACTURER),
+			value: Buffer.from(MANUFACTURER, 'utf8'),
 			descriptors: [
 				new bleno.Descriptor({
 					uuid: '2901',
@@ -30,7 +30,7 @@ class ModelNumberCharacteristic extends bleno.Characteristic {
 		super({
 			uuid: '2a24',
 			properties: ['read'],
-			value: new Buffer(MODEL_NUMBER),
+			value: Buffer.from(MODEL_NUMBER, 'utf8'),
 			descriptors: [
 				new bleno.Descriptor({
 					uuid: '2901',
@@ -46,7 +46,7 @@ class HardwareRevisionCharacteristic extends bleno.Characteristic {
 		super({
 			uuid: '2a27',
 			properties: ['read'],
-			value: new Buffer(HARDWARE_REV),
+			value: Buffer.from(HARDWARE_REV, 'utf8'),
 			descriptors: [
 				new bleno.Descriptor({
 					uuid: '2901',
@@ -62,7 +62,7 @@ class FirmwareRevisionCharacteristic extends bleno.Characteristic {
 		super({
 			uuid: '2a26',
 			properties: ['read'],
-			value: new Buffer(FIRMWARE_REV),
+			value: Buffer.from(FIRMWARE_REV, 'utf8'),
 			descriptors: [
 				new bleno.Descriptor({
 					uuid: '2901',

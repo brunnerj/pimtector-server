@@ -18,7 +18,7 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 				}),
 				new bleno.Descriptor({
 					uuid: '2904',
-					value: new Buffer.from([ 
+					value: Buffer.from([ 
 						0x04, // format = 4 = uint8
 						0x00, // exponent = 0 (none)
 						0xAD, // 0x27AD: unit = percent
@@ -37,7 +37,7 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 		this.max17048 = new Max17048(logger);
 
 		this.name = 'battery_level';
-		this.level = new Buffer.from([ 0 ]);
+		this.level = Buffer.from([ 0 ]);
 		this.updateDelay_ms = 30000; // how long to wait between battery level poll
 	}
 
@@ -52,7 +52,7 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 				const newLevel = Math.min(100, Math.max(0, soc * 100));
 				
 				this.time = new Date();
-				this.level = new Buffer.from([ newLevel ]);
+				this.level = Buffer.from([ newLevel ]);
 
 				if (!suppressNotify && prevLevel !== this.level.readUInt8(0)) {
 					this.notify();
