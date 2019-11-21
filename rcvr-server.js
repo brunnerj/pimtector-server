@@ -7,7 +7,7 @@ const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 
-let rx_pwr = (enable) => {}; // NOP unless we're on a RPi (linux)
+let rx_pwr = () => {}; // NOP unless we're on a RPi (linux)
 if (process.platform === 'linux') {
 
 	// use GPIO13 to enable/disable the receiver
@@ -19,7 +19,6 @@ if (process.platform === 'linux') {
 	rx_pwr = (enable) => {
 		rcvr_en.writeSync(enable ? Gpio.HIGH : Gpio.LOW);
 	}
-
 }
 
 const logger = require('./logging');
