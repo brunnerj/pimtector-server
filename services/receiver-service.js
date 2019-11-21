@@ -2,6 +2,8 @@
 
 const bleno = require('bleno');
 
+const receiver = require('./receiver');
+
 // use GPIO13 to enable/disable the receiver
 // USB power bus on user connect/disconnect
 const Gpio = require('onoff').Gpio;
@@ -42,24 +44,52 @@ class ReceiverCenterFreqCharacteristic extends bleno.Characteristic {
 
 		this.logger = logger;
 		this.name = 'receiver_center_freq';
-		
-		this.Fo = new Buffer.alloc(2); // 2-byte buffer for Fo, MHz
-		this.Fo.writeInt16LE(7000); // 700.0 MHz
 	}
 
 	onReadRequest(offset, callback) {
 		try {
 			
-			const fo = this.Fo.readInt16LE(0);
+			const fo = receiver.frequency(); // Hz
+			const fo_buf = new Buffer.alloc(2);
 
-			this.logger.info(`[receiver-service] Returning receiver center frequency: <0x${fo.toString(16).padStart(4, '0')}> ${fo / 10} MHz`);
+			fo_buf.writeInt16LE(fo / 1e5); // MHz * 10
 
-			callback(this.RESULT_SUCCESS, this.Fo);
+			this.logger.info(`[receiver-service] Returning receiver center frequency: <0x${fo.toString(16).padStart(4, '0')}> ${fo / 1E6} MHz`);
+
+			callback(this.RESULT_SUCCESS, fo_buf);
 
 		} catch (err) {
 
 			this.logger.error(`[receiver-service] ${err}`);
 			callback(this.RESULT_UNLIKELY_ERROR);
+		}
+	}
+
+	onWriteRequest(data, offset, withoutResponse, callback) {
+
+		const fo = data.readUInt16LE(0);
+
+		if (offset) {
+			callback(this.RESULT_ATTR_NOT_LONG);
+
+		} else if (data.length !== 2){
+			callback(this.RESULT_INVALID_ATTRIBUTE_LENGTH);
+
+		} else {
+
+			try {
+
+				receiver.frequency(fo * 1e5);
+
+				this.logger.info(`[receiver-service] Receiver center frequency set <0x${fo.toString(16).padStart(4, '0')}> ${fo / 10} MHz`);
+				callback(this.RESULT_SUCCESS);
+
+			} catch (err) {
+
+				this.logger.error(`[receiver-service] ${err}`);
+				callback(this.RESULT_UNLIKELY_ERROR);
+			}
+	
 		}
 	}
 
@@ -115,7 +145,6 @@ class ReceiverSpanCharacteristic extends bleno.Characteristic {
 
 }
 
-
 class ReceiverPointsCharacteristic extends bleno.Characteristic {
 	constructor(logger) {
 		super({
@@ -165,7 +194,6 @@ class ReceiverPointsCharacteristic extends bleno.Characteristic {
 	}
 
 }
-
 
 class ReceiverDataCharacteristic extends bleno.Characteristic {
 	constructor(logger) {
@@ -248,7 +276,6 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 		this.handle = setInterval(() => { 
 			this.updateBuffer();
 		}, 1000);
-
 	}
 
 	onUnsubscribe() {
@@ -266,7 +293,6 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 		}
 	}
 }
-
 
 class ReceiverService extends bleno.PrimaryService {
 	constructor(logger) {
