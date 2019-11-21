@@ -252,6 +252,34 @@ function frequency(f_Hz) {
 	}
 }
 
+// span really sets the decimation factor
+// which only has discrete available values
+function span(f_Hz) {
+
+	const dev = openDevice();
+	if (typeof dev === 'string') return dev;
+
+	const Fs = rtlsdr.get_sample_rate(dev);
+
+	if (f_Hz === undefined) {
+
+		return Fs / settings.decimate;
+
+	} else {
+
+		const goal = rtlsdr.get_sample_rate(dev) / f_Hz;
+
+		// this gets the closest valid decimation factor
+		const D = [1, 2, 4, 8, 16, 32].reduce((prev, curr) => {
+			return (Math.abs(Fs / curr - goal) < Math.abs(Fs / prev - goal) ? curr : prev);
+		});
+
+		settings.decimate = D;
+		
+		return Fs / D;
+	}
+}
+
 function sampleRate(f_Hz) {
 	
 	const dev = openDevice();
@@ -418,6 +446,7 @@ module.exports = {
 	gain: gain,
 	freqCorrection: freqCorrection,
 	frequency: frequency,
+	span: span,
 	sampleRate: sampleRate,
 	offsetTuning: offsetTuning,
 
