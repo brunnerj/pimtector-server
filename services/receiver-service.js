@@ -12,10 +12,62 @@ const rcvr_en = new Gpio(GPIO_RX_EN, 'out');
 const rx_pwr = (enable) => { rcvr_en.writeSync(enable ? Gpio.HIGH : Gpio.LOW) }
 
 const RECEIVER_SERVICE_UUID				= '00010000-8d54-11e9-b475-0800200c9a66';
-const RECEIVER_DATA_CHAR_UUID			= '00010001-8d54-11e9-b475-0800200c9a66';
-const RECEIVER_CENTER_FREQ_CHAR_UUID	= '00010002-8d54-11e9-b475-0800200c9a66';
-const RECEIVER_SPAN_CHAR_UUID			= '00010003-8d54-11e9-b475-0800200c9a66';
-const RECEIVER_POINTS_CHAR_UUID			= '00010004-8d54-11e9-b475-0800200c9a66';
+
+const RECEIVER_INFO_CHAR_UUID			= '00010001-8d54-11e9-b475-0800200c9a66';
+const RECEIVER_DATA_CHAR_UUID			= '00010002-8d54-11e9-b475-0800200c9a66';
+const RECEIVER_CENTER_FREQ_CHAR_UUID	= '00010003-8d54-11e9-b475-0800200c9a66';
+const RECEIVER_SPAN_CHAR_UUID			= '00010004-8d54-11e9-b475-0800200c9a66';
+const RECEIVER_POINTS_CHAR_UUID			= '00010005-8d54-11e9-b475-0800200c9a66';
+
+class ReceiverInfoCharacteristic extends bleno.Characteristic {
+	constructor(logger) {
+		super({
+			uuid: RECEIVER_INFO_CHAR_UUID,
+			properties: ['read'],
+			descriptors: [
+				new bleno.Descriptor({
+					uuid: '2901',
+					value: 'Receiver vendor, product and serial number'
+				}),
+				new bleno.Descriptor({
+					uuid: '2904',
+					value: new Buffer.from([ 
+						0x19, // UTF-8 string
+						0x00, // 
+						0x00, // 2700 = unitless
+						0x27,
+						0x01, // Bluetooth SIG namespace
+						0x00, // 0x0000: no description
+						0x00 
+					])
+				})
+			]
+		});
+
+		this.logger = logger;
+	}
+
+	onReadRequest(offset, callback) {
+		try {
+			
+			const info = receiver.info(); // { vendor, product, serial }
+
+			const infoStr = `${info.vendor},${info.product},${info.serial}`;
+
+			this.logger.info(`[receiver-service] Returning receiver information: '${infoStr}'`);
+
+			callback(this.RESULT_SUCCESS, new Buffer(infoStr));
+
+		} catch (err) {
+
+			this.logger.error(`[receiver-service] ${err}`);
+			callback(this.RESULT_UNLIKELY_ERROR);
+		}
+	}
+
+}
+
+
 
 class ReceiverCenterFreqCharacteristic extends bleno.Characteristic {
 	constructor(logger) {
@@ -297,6 +349,7 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 class ReceiverService extends bleno.PrimaryService {
 	constructor(logger) {
 
+		const _rcvrInfo = new ReceiverInfoCharacteristic(logger);
 		const _rcvrData = new ReceiverDataCharacteristic(logger);
 		const _rcvrCenterFreq = new ReceiverCenterFreqCharacteristic(logger);
 		const _rcvrSpan = new ReceiverSpanCharacteristic(logger);
@@ -304,10 +357,11 @@ class ReceiverService extends bleno.PrimaryService {
 
 		super({
 			uuid: RECEIVER_SERVICE_UUID,
-			characteristics: [ _rcvrData, _rcvrCenterFreq, _rcvrSpan, _rcvrPoints ]
+			characteristics: [ _rcvrInfo, _rcvrData, _rcvrCenterFreq, _rcvrSpan, _rcvrPoints ]
 		});
 
 		this.name = 'receiver_service';
+		this.rcvrInfo = _rcvrInfo;
 		this.rcvrData = _rcvrData;
 		this.rcvrCenterFreq = _rcvrCenterFreq;
 		this.rcvrSpan = _rcvrSpan;
