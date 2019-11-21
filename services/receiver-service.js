@@ -52,6 +52,10 @@ class ReceiverInfoCharacteristic extends bleno.Characteristic {
 			
 			const info = receiver.info(); // { vendor, product, serial }
 
+			if (typeof info === 'string') {
+				throw info;
+			}
+
 			const infoStr = `${info.vendor},${info.product},${info.serial}`;
 
 			this.logger.info(`[receiver-service] Returning receiver information: '${infoStr}'`);
