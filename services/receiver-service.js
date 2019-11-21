@@ -65,7 +65,7 @@ class ReceiverInfoCharacteristic extends bleno.Characteristic {
 		} catch (err) {
 
 			this.logger.error(`[receiver-service] ${err}`);
-			callback(this.RESULT_UNLIKELY_ERROR);
+			callback(this.RESULT_UNLIKELY_ERROR, err);
 		}
 	}
 
