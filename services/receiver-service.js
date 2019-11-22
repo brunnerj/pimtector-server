@@ -19,6 +19,7 @@ const RECEIVER_CENTER_FREQ_CHAR_UUID	= '00010003-8d54-11e9-b475-0800200c9a66';
 const RECEIVER_SPAN_CHAR_UUID			= '00010004-8d54-11e9-b475-0800200c9a66';
 const RECEIVER_POINTS_CHAR_UUID			= '00010005-8d54-11e9-b475-0800200c9a66';
 
+
 class ReceiverInfoCharacteristic extends bleno.Characteristic {
 	constructor(logger) {
 		super({
@@ -54,7 +55,7 @@ class ReceiverInfoCharacteristic extends bleno.Characteristic {
 
 			if (typeof info === 'string') {
 				this.logger.error(`[receiver-service] ${info}`);
-				callback(this.RESULT_SUCCESS, Buffer.from(info, 'utf8'));
+				callback(this.RESULT_SUCCESS, Buffer.from('ERROR ' + infoStr, 'utf8'));
 				return;
 			}
 
@@ -72,8 +73,6 @@ class ReceiverInfoCharacteristic extends bleno.Characteristic {
 	}
 
 }
-
-
 
 class ReceiverCenterFreqCharacteristic extends bleno.Characteristic {
 	constructor(logger) {
