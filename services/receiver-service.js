@@ -55,7 +55,7 @@ class ReceiverInfoCharacteristic extends bleno.Characteristic {
 
 			if (typeof info === 'string') {
 				this.logger.error(`[receiver-service] ${info}`);
-				callback(this.RESULT_SUCCESS, Buffer.from('ERROR ' + info, 'utf8'));
+				callback(this.RESULT_SUCCESS, Buffer.from('ERROR ' + '100: Receiver failure', 'utf8'));
 				return;
 			}
 
