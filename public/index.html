@@ -9,6 +9,8 @@
 <script type="text/javascript">
 $(document).ready(function()
 {
+	'use strict';
+
 	let device = null;
 	let settings = {};
 
@@ -135,46 +137,63 @@ $(document).ready(function()
 	let peakHold = false;
 	let running = false;
 	
-	const maxBufferLength = 10;
-	const plotRate = 100; // ms
+	const bufferLengthMax = 100;
+	const plotRateMax = 200;
+	const plotRateMin = 30;
+	let plotRate = 100; // ms
 	let overflow = false;
+	let cycle = 0;
+	let plotTmo;
 
 	// Receive data from server - fill buffer
 	socket.on('data', (data) => {
+
+		if (!running) return;
 		
-		if (buffer.length < maxBufferLength) {
+		if (buffer.length < bufferLengthMax) {
 			buffer.push(data);
-		} 
-	});
-
-	let cycle = 0;
-	// Pluck data out of buffer for plotting
-	const plotInterval = setInterval(() => {
-
-		cycle++;
-		if (cycle % 10 == 0) $('.blink').toggleClass('on');
-
-		if (buffer.length < maxBufferLength) {
 			overflow = false;
-			$('.ovf-ind').hide();
 		} else {
 			overflow = true;
-			$('.ovf-ind').show();
 		}
+	});
 
-		if (buffer.length > 0) {
+	socket.on('disconnect', () => {
+
+		running = false;
+		overflow = false;
+		buffer.length = 0;
+		clearInterval(connectInterval);
+		clearTimeout(plotTmo);
+
+		if (socket.connected) {
+			socket.disconnect();
+
+			alert('Server was disconnected!');
+		}
+	});
+
+	// Plot data in buffer
+	const plotData = () => {
+
+		cycle++;
+		const bpc = buffer.length / bufferLengthMax;
+
+		if (cycle % 10 == 0) {
+			$('.blink').toggleClass('on');
+			$('.ovf-ind').toggleClass('overflow', overflow).text((100 * bpc).toFixed(0) + '%, ' + plotRate + 'ms');
+		} 
+
+		if (running && buffer.length > 0) {
 
 			const trace = buffer.shift();
-
-			if (!running) return;
-
 			const N = trace.length;
 			const span = trace[N - 1][0] - trace[0][0];
 			const rbw = span / N;
 
 			let max = -500;
 			let max_pt = 0;
-			for (i = 0; i < trace.length; i++) {
+			for (let i = 0; i < trace.length; i++) {
 				if (trace[i][1] > max) {
 					max = trace[i][1];
 					max_pt = i;
@@ -188,41 +207,56 @@ $(document).ready(function()
 			$('#peak-ind').text(`${trace[max_pt][1].toFixed(1)} dBm @ ${trace[max_pt][0].toFixed(2)} MHz`);
 
 			traces[0] = { label: 'data', data: trace };
+
+			if (!plotData.init) {
+				plotData.init = true;
+
+				plotData.plot = $.plot('#plot', traces, {
+					legend: {
+						show: true
+					},
+					series: {
+						shadowSize: 0
+					},
+					yaxis: {
+						axisLabel: 'Power [dBm]',
+						min: -130,
+						max: -30,
+						ticks: 10
+					},
+					xaxis: {
+						axisLabel: 'Frequency [MHz]'
+					}
+				});
+
+			} else {
+
+				plotData.plot.setData(traces);
+				plotData.plot.draw();
+
+			}
 		}
 
-		if (!plotInterval.init) {
-			plotInterval.init = true;
-
-			plotInterval.plot = $.plot('#plot', traces, {
-				legend: {
-					show: true
-				},
-				series: {
-					shadowSize: 0
-				},
-				yaxis: {
-					axisLabel: 'Power [dBm]',
-					min: -130,
-					max: -30,
-					ticks: 10
-				},
-				xaxis: {
-					axisLabel: 'Frequency [MHz]'
-				}
-			});
+		if (running) {
+			if (bpc > 0.7) {
+				plotRate = Math.max(plotRateMin, plotRate - 10);
+			} else if (bpc < 0.3) {
+				plotRate = Math.min(plotRateMax, plotRate + 10);
+			}
 
 		} else {
 
-			if (running) {
-				plotInterval.plot.setData(traces);
-				plotInterval.plot.draw();
-			}
+			plotRate = plotRateMax;
 		}
-	}, plotRate);
+		
+		if (plotTmo) clearTimeout(plotTmo);
+		plotTmo = setTimeout(plotData, plotRate);
+	}
 
+	// start plot loop
+	plotData();
 
 	// Button click handlers
-
 	$('#CF-ctl').bind('click', (e) => {
 		const newFo = parseFloat(prompt('Set new center frequency in MHz:', settings.frequency / 1e6));
 
@@ -378,9 +412,10 @@ $(document).ready(function()
 		margin-left: 5px;
 	}
 	.ovf-ind {
-		display: none;
 		font-weight: 700;
-		color: red
+	}
+	.ovf-ind.overflow {
+		color: red;
 	}
 	.blink {
 		text-align: right;
@@ -479,7 +514,7 @@ $(document).ready(function()
 				</div>
 				<div class='row'>
 					<div class='ind'>RBW:<span id='rbw-ind'></span></div>
-					<div class='ind ovf-ind'>OVERFLOW</div>
+					<div class='ind ovf-ind'></div>
 					<div class='ind'>N:<span id='N-ind'></span></div>
 				</div>
 			</div>
