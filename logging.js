@@ -4,13 +4,6 @@
 
 const { createLogger, format, transports } = require('winston');
 
-// log to /boot for 'linux' (RPi) platforms
-// so it's easier to get at the log file from Windows machines
-// (because /boot is FAT32 partition on the SD card)
-const logfile = (process.platform === 'linux')
-	? '/boot/pti.log'
-	: 'pti.log';
-
 const logger = createLogger({
 	level: 'info',
 	format: format.combine(
@@ -19,15 +12,21 @@ const logger = createLogger({
 		format.splat(),
 		format.json()
 	),
-	transports: [
-		new transports.File({
-			filename: logfile,
-			handleExceptions: true,
-			maxsize: 1048576, // 1MB
-			maxFiles: 5
-		})
-	]
-})
+	transports: []
+});
+
+// log to /boot for 'linux' (RPi) platforms
+// so it's easier to get at the log file from Windows machines
+// (because /boot is FAT32 partition on the SD card)
+if (process.platform === 'linux') {
+
+	logger.add(new transports.File({
+		filename: '/boot/pti.log',
+		handleExceptions: true,
+		maxsize: 1048576, // 1MB
+		maxFiles: 5
+	}));
+}
 
 // this logs to console if we're not a 'production' release
 if (process.env.NODE_ENV !== 'production') {
