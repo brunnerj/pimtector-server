@@ -6,18 +6,18 @@ const Fili = require('fili');
 const firCalculator = new Fili.FirCoeffs();
 
 // Cache these from call to call
-let N; // frame length
+let N; // data length / 2
 let w; // window type
 let W; // Window data array
 let Fs; // sampling rate
 let D; // decimation factor
 let FilterCoeffs; // low pass filter coefficients
 
-module.exports.signal = function(rawData, settings, frame) {
+module.exports.signal = function(data, settings) {
 
 	// calculate new window if N or window changed or we don't have a window yet
-	if (!W || settings.N !== N || settings.window !== w) {
-		W = window(settings.N, settings.window);
+	if (!W || data.length / 2 !== N || settings.window !== w) {
+		W = window(data.length / 2, settings.window);
 	}
 
 	// calculate new filter if sampling frequency or cutoff frequency has changed
@@ -32,12 +32,12 @@ module.exports.signal = function(rawData, settings, frame) {
 	}
 
 	// save new cache values
-	N = settings.N;
+	N = data.length / 2; // data is interleaved I/Q points
 	w = settings.window;
 	Fs = settings.Fs;
 	D = settings.decimate;
 
-	const M = settings.N / settings.blocks;
+	const M = N / settings.blocks;
 	const adcLSB = settings.adcFullscaleVolts / (2 ** settings.adcBits);
 	const adcShift = (2 ** settings.adcBits - 1) / 2;
 
@@ -52,8 +52,8 @@ module.exports.signal = function(rawData, settings, frame) {
 
 		// signal is comprised of overlapping blocks of time domain raw
 		// data (scaled, shifted and windowed) added point-by-point
-		I[i % M]     += W[i] * adcLSB * (rawData[2 * i + frame * N * (1 - settings.overlap)]     - adcShift);
-		Q[i % M + 1] += W[i] * adcLSB * (rawData[2 * i + frame * N * (1 - settings.overlap) + 1] - adcShift);
+		I[i % M] += W[i] * adcLSB * (data[2 * i]     - adcShift);
+		Q[i % M] += W[i] * adcLSB * (data[2 * i + 1] - adcShift);
 
 	}
 
