@@ -20,6 +20,12 @@ const RECEIVER_SPAN_CHAR_UUID			= '00010004-8d54-11e9-b475-0800200c9a66';
 const RECEIVER_POINTS_CHAR_UUID			= '00010005-8d54-11e9-b475-0800200c9a66';
 
 
+function u16BufToOctet(u16Buf) {
+	const str = u16Buf.toString('hex');
+	return `<0x ${str.slice(0,2)} ${str.slice(2)>}`;
+} 
+
+
 class ReceiverInfoCharacteristic extends bleno.Characteristic {
 	constructor(logger) {
 		super({
@@ -106,12 +112,13 @@ class ReceiverCenterFreqCharacteristic extends bleno.Characteristic {
 	onReadRequest(offset, callback) {
 		try {
 			
-			const fo = receiver.frequency(); // Hz
+			const fo_Hz = receiver.frequency(); // Hz
+			const fo_MHz = fo_Hz / 1e6;
 			const fo_buf = Buffer.alloc(2);
 
-			fo_buf.writeInt16LE(fo / 1e5); // MHz * 10
+			fo_buf.writeUInt16LE(fo_Hz * 10); // MHz * 10
 
-			this.logger.info(`[receiver-service] Returning receiver center frequency: <0x${fo.toString(16).padStart(4, '0')}> ${fo / 1E6} MHz`);
+			this.logger.info(`[receiver-service] Returning receiver center frequency: ${u16BufToOctet(fo_buf)} ${fo_MHz} MHz`);
 
 			callback(this.RESULT_SUCCESS, fo_buf);
 
@@ -124,21 +131,28 @@ class ReceiverCenterFreqCharacteristic extends bleno.Characteristic {
 
 	onWriteRequest(data, offset, withoutResponse, callback) {
 
-		const fo = data.readUInt16LE(0);
+		const fo = data.readUInt16LE(0); // MHz * 10
+		const fo_MHz = fo / 10;
+		const fo_Hz = fo * 1e5;
 
 		if (offset) {
 			callback(this.RESULT_ATTR_NOT_LONG);
 
-		} else if (data.length !== 2){
+		} else if (data.length !== 2) {
 			callback(this.RESULT_INVALID_ATTRIBUTE_LENGTH);
 
 		} else {
 
 			try {
 
-				receiver.frequency(fo * 1e5);
+				const result = receiver.frequency(fo_Hz);
 
-				this.logger.info(`[receiver-service] Receiver center frequency set <0x${fo.toString(16).padStart(4, '0')}> ${fo / 10} MHz`);
+				if (result !== fo_Hz) {
+					this.logger.error(`[receiver-server] ${result}`);
+					callback(this.RESULT_UNLIKELY_ERROR);
+				}
+
+				this.logger.info(`[receiver-service] Receiver center frequency set ${u16BufToOctet(data)} ${fo_MHz} MHz`);
 				callback(this.RESULT_SUCCESS);
 
 			} catch (err) {
@@ -179,24 +193,59 @@ class ReceiverSpanCharacteristic extends bleno.Characteristic {
 
 		this.logger = logger;
 		this.name = 'receiver_span';
-		
-		this.span = Buffer.alloc(2); // 2-byte buffer for span
-		this.span.writeInt16LE(1600); // 160 kHz
 	}
 
 	onReadRequest(offset, callback) {
 		try {
 			
-			const span = this.span.readInt16LE(0);
+			const span_Hz = receiver.span(); // Hz
+			const span_kHz = span_Hz / 1e3;
+			const span_buf = Buffer.alloc(2);
 
-			this.logger.info(`[receiver-service] Returning receiver span: <0x${span.toString(16).padStart(4, '0')}> ${span / 10} kHz`);
+			span_buf.writeUInt16LE(span_kHz * 10); // kHz * 10
 
-			callback(this.RESULT_SUCCESS, this.span);
+			this.logger.info(`[receiver-service] Returning receiver span: ${u16BufToOctet(span_buf)} ${span_kHz} kHz`);
+
+			callback(this.RESULT_SUCCESS, span_buf);
 
 		} catch (err) {
 
 			this.logger.error(`[receiver-service] ${err}`);
 			callback(this.RESULT_UNLIKELY_ERROR);
+		}
+	}
+
+	onWriteRequest(data, offset, withoutResponse, callback) {
+
+		const span = data.readUInt16LE(0); // kHz * 10
+		const span_kHz = span / 10;
+		const span_Hz = span_kHz * 1e3;
+
+		if (offset) {
+			callback(this.RESULT_ATTR_NOT_LONG);
+
+		} else if (data.length !== 2){
+			callback(this.RESULT_INVALID_ATTRIBUTE_LENGTH);
+
+		} else {
+
+			try {
+
+				const result = receiver.span(span_Hz);
+
+				if (result !== span_Hz) {
+					this.logger.error(`[receiver-server] ${result}`);
+					callback(this.RESULT_UNLIKELY_ERROR);
+				}
+
+				this.logger.info(`[receiver-service] Receiver span set ${u16BufToOctet(data)} ${span_kHz} kHz`);
+				callback(this.RESULT_SUCCESS);
+
+			} catch (err) {
+
+				this.logger.error(`[receiver-service] ${err}`);
+				callback(this.RESULT_UNLIKELY_ERROR);
+			}
 		}
 	}
 
@@ -229,9 +278,6 @@ class ReceiverPointsCharacteristic extends bleno.Characteristic {
 
 		this.logger = logger;
 		this.name = 'receiver_points';
-		
-		this.points = Buffer.alloc(2); // 2-byte buffer for span
-		this.points.writeInt16LE(256); // 256 points
 	}
 
 	onReadRequest(offset, callback) {
