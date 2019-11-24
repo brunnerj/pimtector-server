@@ -17,7 +17,7 @@ $(document).ready(function()
 	}
 
 	const get_setting = (setting, onError, onSuccess) => {
-		$.ajax({ url: '/' + setting, dataType: 'json' }).done((res) => {
+		return $.ajax({ url: '/' + setting, dataType: 'json' }).done((res) => {
 			if (res.error && onError) {
 				onError(res.error);
 			}
@@ -31,7 +31,7 @@ $(document).ready(function()
 	const set_setting = (setting, value, onError, onSuccess) => {
 		const data = {};
 		data[setting] = value;
-		$.ajax({ type: 'POST', url: '/' + setting, data: JSON.stringify(data), dataType: 'json', contentType: 'application/json' }).done((res) => {
+		return $.ajax({ type: 'POST', url: '/' + setting, data: JSON.stringify(data), dataType: 'json', contentType: 'application/json' }).done((res) => {
 			if (res.error && onError) {
 				onError(res.error);
 			}
@@ -64,78 +64,68 @@ $(document).ready(function()
 
 				if (!settings.initialized) {
 
-					set_setting('frequency', 700e6, 
-						(err) => {
-							handleError(null, err);
-						}, 
-						(freq) => {
-							$('#CF-ctl .val').text((freq / 1e6).toFixed(3) + ' MHz');
-						});
-					set_setting('averages', 32, 
-						(err) => {
-							handleError(null, err);
-						}, 
-						(avgs) => {
-							$('#averages-ctl .val').text(avgs);
-						});
+					set_setting('frequency', 700e6);
+					set_setting('sampleRate', 2.56e6);
 
 					set_setting('gainMode', 0);
 					set_setting('agc', 0);
 					set_setting('gain', 42);
-					//set_setting('freqCorrection', 0);
-					set_setting('sampleRate', 2.56e6);
-
-					set_setting('frames', 4);
-					set_setting('decimate', 16);
 					set_setting('offsetTuning', 1);
 
 					settings.initialized = true;
 
 					$('button').prop('disabled', false);
+				} 
+				
+				get_setting('frequency', 
+					(err) => {
+						handleError(null, err);
+					}, 
+					(freq) => {
+						$('#CF-ctl .val').text((freq / 1e6).toFixed(3) + ' MHz');
+					});
 
-				} else {
-					get_setting('frequency', 
-						(err) => {
-							handleError(null, err);
-						}, 
-						(freq) => {
-							$('#CF-ctl .val').text((freq / 1e6).toFixed(3) + ' MHz');
-						});
+				get_setting('averages',
+					(err) => {
+						handleError(null, err);
+					}, 
+					(avgs) => {
+						$('#averages-ctl .val').text(avgs);
+					});
 
-					get_setting('averages',
-						(err) => {
-							handleError(null, err);
-						}, 
-						(avgs) => {
-							$('#averages-ctl .val').text(avgs);
-						});
+				get_setting('decimate',
+					(err) => {
+						handleError(null, err);
+					}, 
+					(avgs) => {
+						$('#decimate-ctl .val').text(avgs);
+					});
 
-					get_setting('offsetTuning',
-						(err) => {
-							handleError(null, err);
-						},
-						(enabled) => {
-							$('#offsetTuning-ctl .val').text(enabled ? 'ON' : 'OFF');
-						});
+				get_setting('offsetTuning',
+					(err) => {
+						handleError(null, err);
+					},
+					(enabled) => {
+						$('#offsetTuning-ctl .val').text(enabled ? 'ON' : 'OFF');
+					});
 
-					get_setting('decimate',
-						(err) => {
-							handleError(null, err);
-						}, 
-						(d) => {
-							$('#decimate-ctl .val').text(d);
-						});
+				get_setting('chunkDiv',
+					(err) => {
+						handleError(null, err);
+					}, 
+					(f) => {
+						$('#chunkDiv-ctl .val').text(f);
+					});
 
-					get_setting('frames',
-						(err) => {
-							handleError(null, err);
-						}, 
-						(f) => {
-							$('#frames-ctl .val').text(f);
-						});
-				}
+				get_setting('blocks',
+					(err) => {
+						handleError(null, err);
+					}, 
+					(f) => {
+						$('#blocks-ctl .val').text(f);
+					});
+
 			});
-
 	}, 5000);
 
 	const socket = io();
@@ -145,29 +135,39 @@ $(document).ready(function()
 	let peakHold = false;
 	let running = false;
 	
-	const maxBufferLength = 300;
-	const plotRate = 30; // ms
+	const maxBufferLength = 10;
+	const plotRate = 100; // ms
 	let overflow = false;
 
 	// Receive data from server - fill buffer
 	socket.on('data', (data) => {
 		
-		if (running && buffer.length < maxBufferLength) {
+		if (buffer.length < maxBufferLength) {
 			buffer.push(data);
+		} 
+	});
+
+	let cycle = 0;
+	// Pluck data out of buffer for plotting
+	const plotInterval = setInterval(() => {
+
+		cycle++;
+		if (cycle % 10 == 0) $('.blink').toggleClass('on');
+
+		if (buffer.length < maxBufferLength) {
 			overflow = false;
 			$('.ovf-ind').hide();
 		} else {
 			overflow = true;
-			$('ovf-ind').show();
+			$('.ovf-ind').show();
 		}
-	});
 
-	// Pluck data out of buffer for plotting
-	const plotInterval = setInterval(() => {
-
-		if (buffer.length > 0 && running) {
+		if (buffer.length > 0) {
 
 			const trace = buffer.shift();
+
+			if (!running) return;
+
 			const N = trace.length;
 			const span = trace[N - 1][0] - trace[0][0];
 			const rbw = span / N;
@@ -213,8 +213,10 @@ $(document).ready(function()
 
 		} else {
 
-			plotInterval.plot.setData(traces);
-			plotInterval.plot.draw();
+			if (running) {
+				plotInterval.plot.setData(traces);
+				plotInterval.plot.draw();
+			}
 		}
 	}, plotRate);
 
@@ -253,25 +255,33 @@ $(document).ready(function()
 		}
 	});
 
-	$('#frames-ctl').bind('click', (e) => {
-		const f = parseInt(prompt('Set raw data frames', settings.frames));
+	$('#chunkDiv-ctl').bind('click', (e) => {
+		const cd = parseInt(prompt('Set raw data chunk size', settings.chunkDiv));
 
-		if (f && f >= 1 || f <= 16) {
-			set_setting('frames', f);
+		if (cd && cd >= 1 || cd <= 16) {
+			set_setting('chunkDiv', cd);
+		}
+	});
+
+	$('#blocks-ctl').bind('click', (e) => {
+		const b = parseInt(prompt('Set block processing', settings.blocks));
+
+		if (b && b >= 1 || b <= 16) {
+			set_setting('blocks', b);
 		}
 	});
 
 	$('#trigger').bind('click', (e) => {
 		if (running) {
+			running = false;
 			$(e.target).text('PLAY');
 			socket.emit('stopData');
-			running = false;
 		} else {
 			set_setting('resetBuffer', 1, null, () => {
+				running = true;
 				$(e.target).text('PAUSE');
 				socket.emit('startData');
 				buffer.length = 0;
-				running = true;
 			});
 		}
 	});
@@ -372,6 +382,13 @@ $(document).ready(function()
 		font-weight: 700;
 		color: red
 	}
+	.blink {
+		text-align: right;
+		color: transparent;
+	}
+	.blink.on {
+		color: #fff;
+	}
 	.plot-wrapper {
 		box-sizing: border-box;
 		width: 850px;
@@ -432,14 +449,19 @@ $(document).ready(function()
 						<div class='lbl'>Decimation Factor</span>
 						<div class='val'>&nbsp;</div>
 					</button>
-					<button class='input' id='frames-ctl'>
-						<div class='lbl'>Raw Data Frames</span>
+					<button class='input' id='chunkDiv-ctl'>
+						<div class='lbl'>Chunk Divisor</span>
+						<div class='val'>&nbsp;</div>
+					</button>
+					<button class='input' id='blocks-ctl'>
+						<div class='lbl'>DSP Blocks</span>
 						<div class='val'>&nbsp;</div>
 					</button>
 				</div>
 			</div>
 
 			<div class='menu'>
+				<div class='blink on'>*</div>
 				<button class='toggle' id='trigger'>PLAY</button>
 			</div>
 		</div>
