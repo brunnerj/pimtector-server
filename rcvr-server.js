@@ -79,6 +79,7 @@ app.route('/frequency')
 	})
 	.post((req, res) => {
 		res.json(wrapResult('frequency', device.frequency(req.body.frequency)));
+		buffer.length = 0;
 	});
 
 app.route('/sampleRate')
@@ -87,6 +88,7 @@ app.route('/sampleRate')
 	})
 	.post((req, res) => {
 		res.json(wrapResult('sampleRate', device.sampleRate(req.body.sampleRate)));
+		buffer.length = 0;
 	});
 
 app.route('/offsetTuning')
@@ -95,6 +97,7 @@ app.route('/offsetTuning')
 	})
 	.post((req, res) => {
 		res.json(wrapResult('offsetTuning', device.offsetTuning(req.body.offsetTuning)));
+		buffer.length = 0;
 	});
 
 
@@ -106,6 +109,7 @@ app.route('/averages')
 	.post((req, res) => {
 		device.settings.averages = req.body.averages;
 		res.json(wrapResult('averages', device.settings.averages));
+		buffer.length = 0;
 	});
 
 app.route('/decimate')
@@ -115,6 +119,7 @@ app.route('/decimate')
 	.post((req, res) => {
 		device.settings.decimate = req.body.decimate;
 		res.json(wrapResult('decimate', device.settings.decimate));
+		buffer.length = 0;
 	});
 
 app.route('/chunkDiv')
@@ -124,6 +129,7 @@ app.route('/chunkDiv')
 	.post((req, res) => {
 		device.settings.chunkDiv = req.body.chunkDiv;
 		res.json(wrapResult('chunkDiv', device.settings.chunkDiv));
+		buffer.length = 0;
 	});
 
 app.route('/blocks')
@@ -133,12 +139,16 @@ app.route('/blocks')
 	.post((req, res) => {
 		device.settings.blocks = req.body.blocks;
 		res.json(wrapResult('blocks', device.settings.blocks));
+		buffer.length = 0;
 	});
 
 // Write-only requests
 app.post('/gainMode', (req, res) => { res.json(wrapResult('gainMode', req.body.gainMode)); });
 app.post('/agc', (req, res) => { res.json(wrapResult('agc', req.body.agc)); });
-app.post('/resetBuffer', (req, res) => { res.json(wrapResult('resetBuffer', device.resetBuffer())); });
+app.post('/resetBuffer', (req, res) => { 
+	res.json(wrapResult('resetBuffer', device.resetBuffer())); 
+	buffer.length = 0;
+});
 
 // track connections (only 1 allowed) and data stream running
 let connection = false;
@@ -146,35 +156,61 @@ let running = false;
 
 // buffer data traces from receiver
 const buffer = [];
-const bufferMaxLength = 10;
-const pushRate = 50; // ms
+const bufferLengthMax = 10;
+
+const pushRateMax = 100;
+const pushRateMin = 30;
+let pushRate = pushRateMin; 
+let pushTmo;
+
+let overflow = false;
+let cycle = 0;
 
 io.on('connection', (socket) => {
 
-	let cycle = 0;
-	const pushInterval = setInterval(() => {
-		cycle++;
+	const push = () => {
 
-		if (buffer.length > 0 && cycle % 10 == 0) console.log(`BUFFER @ ${100 * (buffer.length / bufferMaxLength)}%`);
+		cycle++;
+		const bpc = buffer.length / bufferLengthMax;
+
+		if (buffer.length > 0 && cycle % 10 == 0) {
+
+			const fullWidth = 25;
+			const fillWidth = Math.floor(bpc * fullWidth);
+			const ovl = overflow ? '\u001b[31m*OVL*\u001b[0m' : '     ';
+			const bar = "[" + "#".repeat(fillWidth) + " ".repeat(fullWidth - fillWidth) + "] ";
+
+			process.stdout.write("\u001b[1000D" + bar + (100 * bpc).toFixed(0) + "%, " + pushRate + " ms " + ovl);
+		}
 
 		if (connection && running && buffer.length > 0) {
 			socket.emit('data', buffer.shift());
+
+			if (bpc > 0.7) {
+				pushRate = Math.max(pushRateMin, pushRate - 10);
+			} else if (bpc < 0.3) {
+				pushRate = Math.min(pushRateMax, pushRate + 10);
+			}
+
+		} else {
+			pushRate = pushRateMax;
 		}
-	
-	}, pushRate);
+
+		if (pushTmo) clearTimeout(pushTmo);
+		pushTmo = setTimeout(push, pushRate);
+	};
 
 	function onStreamData(data) {
 
 		if (!running) return;
 
-		if (buffer.length < bufferMaxLength) {
-
+		if (buffer.length < bufferLengthMax) {
+			overflow = false;
 			buffer.push(data);
 		
-		} else {
+		}  else {
 
-			log('SERVER BUFFER OVERFLOW');
-
+			overflow = true;
 		}
 	}
 
@@ -187,14 +223,18 @@ io.on('connection', (socket) => {
 	// enable receiver when user connected
 	rx_pwr(true);
 
+	// start push loop
+	push();
+
 	log('user connected');
 	connection = true;
 
 	socket.on('disconnect', () => {
 
 		log('user disconnected');
+
 		device.stopData();
-		clearInterval(pushInterval);
+		clearTimeout(pushTmo);
 		connection = false;
 		running = false;
 		buffer.length = 0;
@@ -230,3 +270,17 @@ io.on('connection', (socket) => {
 });
 
 http.listen(port, () => { log(`Listening on *:${port}...`); });
+
+['SIGINT', 'SIGTERM', 'SIGHUP'].forEach(signal => process.on(signal, () => {
+	log(`Got ${signal} - shutting down`);
+
+	device.stopData();
+	clearTimeout(pushTmo);
+	connection = false;
+	running = false;
+	buffer.length = 0;
+
+	if (io) io.emit('disconnect');
+
+	http.close(() => { process.exit(0); });
+}));
