@@ -48,7 +48,7 @@ app.use(express.json());
 
 // Log all requests
 app.use(function (req, res, next) {
-	log(`${req.method} ${req.url}`);
+	//log(`${req.method} ${req.url}`);
 	next();
 })
 
@@ -117,15 +117,23 @@ app.route('/decimate')
 		res.json(wrapResult('decimate', device.settings.decimate));
 	});
 
-app.route('/frames')
+app.route('/chunkDiv')
 	.get((req, res) => {
-		res.json(wrapResult('frames', device.settings.frames));
+		res.json(wrapResult('chunkDiv', device.settings.chunkDiv));
 	})
 	.post((req, res) => {
-		device.settings.frames = req.body.frames;
-		res.json(wrapResult('frames', device.settings.frames));
+		device.settings.chunkDiv = req.body.chunkDiv;
+		res.json(wrapResult('chunkDiv', device.settings.chunkDiv));
 	});
 
+app.route('/blocks')
+	.get((req, res) => {
+		res.json(wrapResult('blocks', device.settings.blocks));
+	})
+	.post((req, res) => {
+		device.settings.blocks = req.body.blocks;
+		res.json(wrapResult('blocks', device.settings.blocks));
+	});
 
 // Write-only requests
 app.post('/gainMode', (req, res) => { res.json(wrapResult('gainMode', req.body.gainMode)); });
@@ -138,34 +146,42 @@ let running = false;
 
 // buffer data traces from receiver
 const buffer = [];
-const bufferMaxLength = 300;
-const pubRate = 10;
+const bufferMaxLength = 10;
+const pushRate = 50; // ms
 
 io.on('connection', (socket) => {
 
-	let pushInterval = null;
+	let cycle = 0;
+	const pushInterval = setInterval(() => {
+		cycle++;
+
+		if (buffer.length > 0 && cycle % 10 == 0) console.log(`BUFFER @ ${100 * (buffer.length / bufferMaxLength)}%`);
+
+		if (connection && running && buffer.length > 0) {
+			socket.emit('data', buffer.shift());
+		}
+	
+	}, pushRate);
 
 	function onStreamData(data) {
+
+		if (!running) return;
+
 		if (buffer.length < bufferMaxLength) {
-			//log(`buffering a ${data.length} point trace`);
+
 			buffer.push(data);
+		
 		} else {
+
 			log('SERVER BUFFER OVERFLOW');
-		}
-		if (!pushInterval) {
-			pushInterval = setInterval(() => {
-				if (buffer.length > 0) {
-					socket.emit('data', buffer.shift());
-				}
-			}, pubRate);
+
 		}
 	}
 
 	function onStreamEnd() {
 		running = false;
-		if (pushInterval) clearInterval(pushInterval);
-		pushInterval = null;
-		log('Data stream stopped')
+		buffer.length = 0;
+		log('Data stream stopped');
 	}
 
 	// enable receiver when user connected
@@ -175,13 +191,16 @@ io.on('connection', (socket) => {
 	connection = true;
 
 	socket.on('disconnect', () => {
-		// disable receiver when user disconnected
-		rx_pwr(false);
-		
+
 		log('user disconnected');
+		device.stopData();
+		clearInterval(pushInterval);
 		connection = false;
 		running = false;
-		device.stopData();
+		buffer.length = 0;
+
+		// disable receiver when user disconnected
+		rx_pwr(false);
 	});
 
 	socket.on('startData', () => {
