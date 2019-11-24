@@ -15,15 +15,15 @@ const settings = {
 	adcBits: 8, // ADC bit width
 	adcFullscaleVolts: 2, // ADC full scale Vpeak-to-peak
 
-	N: 2**13, // number of I/Q points used to process ADC raw data for each frame
+	N: 2**15, // number of I/Q points used to process ADC raw data and sets the device buffer length
 	Fs: 2.56e6, // ADC sample rate, Hz
 
-	frames: 4, // ADC buffer is split into this many frames
-	overlap: 0.5, // the ADC frames overlap by this amount (0 to 1 is no overlap to 100%)
+	chunkDiv: 2, // Make chunks of N/chunkDiv lengths (1, 2, 4, 8, 16, ...)
+	overlap: 0.5, // overlap chunks by this amount (0 to 1 is no overlap to 100%)
 
-	window: WINDOWS.blackman, // time-domain window weighting for the raw ADC frames
+	window: WINDOWS.blackman, // time-domain window weighting for the raw ADC data
 
-	blocks: 4, // Each ADC frame is split into this many blocks (time domain aliasing
+	blocks: 2, // Each ADC chunk is split into this many blocks (time domain aliasing
 	// is used here, as blocks are added, point-by-point yielding an aliased time signal
 	// that is N/blocks long).  This is the so-called "Polyphase Filter Bank Technique".
 	// See e.g., https://www.embedded.com/dsp-tricks-building-a-practical-spectrum-analyzer/,
@@ -32,10 +32,7 @@ const settings = {
 
 	decimate: 16, // decimation factor to lower the effective sample rate to narrow the span
 
-	averages: 32, // combine this many spectral traces to make one displayed trace
-
-	deviceBufs: 15, // how many trace buffer blocks on the device
-	deviceBufLen: 2**18, // 256kB, I/Q data interleaved in each trace
+	averages: 8 // combine this many spectral traces to make one displayed trace
 }
 
 const ERRORS = {
@@ -280,6 +277,17 @@ function span(f_Hz) {
 	}
 }
 
+// Number of points is also a derived
+// quantity based on the number of points
+// from the raw acquisition (N), the blocks
+// used in the time-domain alias processing,
+// and the decimation factor (read-only).
+function points(n) {
+
+	return settings.N / settings.blocks / settings.decimate;
+}
+
+
 function sampleRate(f_Hz) {
 	
 	const dev = openDevice();
@@ -330,6 +338,7 @@ function startData(onData, onEnd, logger) {
 	if (typeof dev === 'string') return dev;
 
 	let Fo;
+	let chunkDiv;
 	let decimate;
 	let averages;
 	let traces;
@@ -339,8 +348,13 @@ function startData(onData, onEnd, logger) {
 
 		const rawData = new Uint8Array(data);
 
-		if (!traces || averages !== settings.averages || Fo !== settings.Fo || decimate !== settings.decimate) {
+		if (!traces || 
+			averages !== settings.averages || 
+			Fo !== settings.Fo || 
+			decimate !== settings.decimate || 
+			chunkDiv !== settings.chunkDiv) {
 			Fo = settings.Fo;
+			chunkDiv = settings.chunkDiv;
 			decimate = settings.decimate;
 			averages = settings.averages;
 			traces = [];
@@ -348,18 +362,29 @@ function startData(onData, onEnd, logger) {
 
 		// Process Raw ADC Data
 		//
-		// Raw data buffer is I/Q (uint8) points, interleaved. See the settings.deviceBufLen
-		// for the number of raw data points. There will be deviceBufLen / 2 complex data points.
-		//
 		// Signal is deinterleaved (split I and Q arrays), then scaled and shifted by the ADC
 		// bit values (shift from unsigned to signed) and scaled by the ADC LSB value.
-		// The entire raw data buffer is split into overlapping frames by the settings.overlap
-		// percentage.  Each frame is processed independently into a spectral trace and
+		// The entire raw data buffer is split into overlapping chunks by the settings.overlap
+		// percentage.  Each chunk is processed independently into a spectral trace and
 		// spectral traces can be averaged together.
-		for (let frame = 0; frame < settings.frames; frame++) {
+
+		// Break up rawData array into overlapping (settings.overlap) chunks according
+		// to the settings.chunkDiv.  Number of chunks is then given by:
+		const ovl = settings.overlap;
+		const chunks = chunkDiv / ovl - 1;
+		const Nchunk = settings.N / chunkDiv; // points per chunk
+
+		for (let c = 0; c < chunks; c++) {
+
+			// chunk the raw data 
+			const start = c * Nchunk * ovl;
+			const end = start + Nchunk; // slice goes up to, but does not include end index
+
+			//console.log(`chunking data from ${start} to ${end - 1}`);
+			const chunk = rawData.slice(start, end);
 
 			// Scale, shift, window, etc each frame
-			let {I, Q} = signal(rawData, settings, frame);
+			let {I, Q} = signal(chunk, settings);
 
 			// Calculate power spectrum (FFT)
 			let ps = spectrum({I, Q});
@@ -368,7 +393,7 @@ function startData(onData, onEnd, logger) {
 			if (traces.length >= averages) {
 				traces.shift();
 			} 
-			traces.push(ps);
+			traces.push(ps); // ps);
 
 			// clone the first (oldest) trace to our accumulator
 			trace = traces[0].slice(0);
@@ -411,7 +436,7 @@ function startData(onData, onEnd, logger) {
 	}
 
 	if (logger) logger.info('[receiver] DAQ starting');
-	const code = rtlsdr.read_async(dev, _onData, _onEnd, settings.deviceBufs, settings.deviceBufLen);
+	const code = rtlsdr.read_async(dev, _onData, _onEnd, 0, 0);
 	if (code) return error(500, code);
 
 	return 0;
@@ -447,6 +472,7 @@ module.exports = {
 	freqCorrection: freqCorrection,
 	frequency: frequency,
 	span: span,
+	points: points,
 	sampleRate: sampleRate,
 	offsetTuning: offsetTuning,
 
