@@ -219,7 +219,7 @@ io.on('connection', (socket) => {
 
 	function onStreamEnd() {
 
-		log('Data stream stopped');
+		log('Data stream stopped' + (running ? ' - while running!' : ''));
 
 		if (running) {
 			log('Attempting to restart data stream');
