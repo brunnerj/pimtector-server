@@ -159,8 +159,8 @@ const buffer = [];
 const bufferLengthMax = 10;
 
 const pushRateMax = 400;
-const pushRateMin = 100;
-let pushRate = pushRateMax;
+const pushRateMin = 20;
+let pushRate = pushRateMin;
 let pushTmo;
 let overflow = false;
 
@@ -181,10 +181,10 @@ io.on('connection', (socket) => {
 
 		const fullWidth = 25;
 		const fillWidth = Math.floor(bpc * fullWidth);
-		const ovl = overflow ? '\u001b[31m*OVL*\u001b[0m' : '     ';
-		const bar = "[" + "#".repeat(fillWidth) + " ".repeat(fullWidth - fillWidth) + "] ";
+		const ovl = overflow ? '\u001b[31m*OVL*\u001b[0m' : '';
+		const bar = '[' + '#'.repeat(fillWidth) + ' '.repeat(fullWidth - fillWidth) + '] ';
 
-		process.stdout.write("\u001b[1000D" + bar + (100 * bpc).toFixed(0) + "%, " + pushRate + " ms (" + actualRate + " ms)" + ovl);
+		process.stdout.write('\u001b[1000D' + bar + (100 * bpc).toFixed(0) + '%, ' + pushRate + ' ms (' + actualRate + ' ms) ' + ovl + '\x1b[K');
 
 		if (connection && running && buffer.length > 0) {
 			socket.emit('data', buffer.shift());
