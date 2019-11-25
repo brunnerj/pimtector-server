@@ -196,7 +196,7 @@ io.on('connection', (socket) => {
 			}
 
 		} else {
-			pushRate = pushRateMax;
+			pushRate = pushRateMin;
 		}
 
 		if (pushTmo) clearTimeout(pushTmo);
@@ -246,11 +246,12 @@ io.on('connection', (socket) => {
 
 		log('user disconnected');
 
-		device.stopData();
-		clearTimeout(pushTmo);
 		connection = false;
 		running = false;
 		buffer.length = 0;
+
+		device.stopData();
+		clearTimeout(pushTmo);
 
 		// disable receiver when user disconnected
 		rx_pwr(false);
