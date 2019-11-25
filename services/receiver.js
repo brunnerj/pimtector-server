@@ -15,7 +15,7 @@ const settings = {
 	adcBits: 8, // ADC bit width
 	adcFullscaleVolts: 2, // ADC full scale Vpeak-to-peak
 
-	N: 2**14, // number of I/Q points used to process ADC raw data and sets the device buffer length
+	N: 2**13, // number of I/Q points used to process ADC raw data and sets the device buffer length
 	Fs: 2.56e6, // ADC sample rate, Hz
 
 	chunkDiv: 2, // Make chunks of N/chunkDiv lengths (1, 2, 4, 8, 16, ...)

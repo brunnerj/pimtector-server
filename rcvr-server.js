@@ -158,7 +158,7 @@ let running = false;
 const buffer = [];
 const bufferLengthMax = 10;
 
-const pushRateMax = 400;
+const pushRateMax = 250;
 const pushRateMin = 20;
 let pushRate = pushRateMin;
 let pushTmo;
@@ -218,9 +218,19 @@ io.on('connection', (socket) => {
 	}
 
 	function onStreamEnd() {
-		running = false;
-		buffer.length = 0;
+
 		log('Data stream stopped');
+
+		if (running) {
+			log('Attempting to restart data stream');
+			
+			device.resetBuffer();
+
+			if (device.startData(onStreamData, onStreamEnd, logger)) {
+				logger.error('[rcvr-server] Error restarting data stream');
+				running = false;
+			}
+		}
 	}
 
 	// enable receiver when user connected
@@ -247,22 +257,26 @@ io.on('connection', (socket) => {
 	});
 
 	socket.on('startData', () => {
-		log('Start data stream requested');
 
 		if (!connection || running) return;
 
+		log('Start data stream requested');
+
+		running = true;
 		buffer.length = 0;
 		if (device.startData(onStreamData, onStreamEnd, logger)) {
 			logger.error('[rcvr-server] Error starting data stream');
-		} else {
-			running = true;
+			running = false;
 		}
 	});
 
 	socket.on('stopData', () => {
-		log('Stop data stream requested');
 
 		if (!running) return;
+
+		log('Stop data stream requested');
+		
+		running = false;
 
 		if (device.stopData()) {
 			logger.error('[rcvr-server] Error stopping data stream');
