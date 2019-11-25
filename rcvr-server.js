@@ -162,18 +162,15 @@ const pushRateMax = 100;
 const pushRateMin = 30;
 let pushRate = pushRateMin; 
 let pushTmo;
-
 let overflow = false;
-let cycle = 0;
 
 io.on('connection', (socket) => {
 
 	const push = () => {
 
-		cycle++;
 		const bpc = buffer.length / bufferLengthMax;
 
-		if (buffer.length > 0 && cycle % 10 == 0) {
+		if (buffer.length > 0) {
 
 			const fullWidth = 25;
 			const fillWidth = Math.floor(bpc * fullWidth);

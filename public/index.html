@@ -144,12 +144,20 @@ $(document).ready(function()
 	let overflow = false;
 	let cycle = 0;
 	let plotTmo;
-	let timestamp;
+	let dataTimestamp;
+	let plotTimestamp;
 
 	// Receive data from server - fill buffer
 	socket.on('data', (data) => {
 
 		if (!running) return;
+
+		const now = new Date();
+
+		if (dataTimestamp) {
+			$('.datarate-ind').text((now - dataTimestamp) + ' ms');
+		}
+		dataTimestamp = now;
 		
 		if (buffer.length < bufferLengthMax) {
 			buffer.push(data);
@@ -182,10 +190,10 @@ $(document).ready(function()
 
 		const now = new Date();
 
-		if (timestamp) {
-			$('.rate-ind').text((now - timestamp) + ' ms');
+		if (plotTimestamp) {
+			$('.plotrate-ind').text((now - plotTimestamp) + ' ms');
 		}
-		timestamp = now;
+		plotTimestamp = now;
 
 		if (cycle % 10 == 0) {
 			$('.blink').toggleClass('on');
@@ -523,7 +531,8 @@ $(document).ready(function()
 				<div class='row'>
 					<div class='ind'>RBW:<span id='rbw-ind'></span></div>
 					<div class='ind ovf-ind'></div>
-					<div class='ind rate-ind'></div>
+					<div class='ind plotrate-ind'></div>
+					<div class='ind datarate-ind'></div>
 					<div class='ind'>N:<span id='N-ind'></span></div>
 				</div>
 			</div>
