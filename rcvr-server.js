@@ -158,9 +158,9 @@ let running = false;
 const buffer = [];
 const bufferLengthMax = 10;
 
-const pushRateMax = 100;
-const pushRateMin = 30;
-let pushRate = pushRateMin;
+const pushRateMax = 400;
+const pushRateMin = 100;
+let pushRate = pushRateMax;
 let pushTmo;
 let overflow = false;
 
