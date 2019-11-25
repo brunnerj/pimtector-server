@@ -242,9 +242,13 @@ io.on('connection', (socket) => {
 	log('user connected');
 	connection = true;
 
-	socket.on('disconnect', () => {
+	socket.on('error', (error) => {
+		logger.error('[rcvr-server] ' + error);
+	});
 
-		log('user disconnected');
+	socket.on('disconnect', (reason) => {
+
+		log('user disconnected:' + reason);
 
 		connection = false;
 		running = false;
