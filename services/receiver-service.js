@@ -22,7 +22,7 @@ const RECEIVER_POINTS_CHAR_UUID			= '00010005-8d54-11e9-b475-0800200c9a66';
 
 function u16BufToOctet(u16Buf) {
 	const str = u16Buf.toString('hex');
-	return `<0x ${str.slice(0,2)} ${str.slice(2)>}`;
+	return `<0x ${str.slice(0,2)} ${str.slice(2)}>`;
 } 
 
 
