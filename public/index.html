@@ -11,8 +11,32 @@ $(document).ready(function()
 {
 	'use strict';
 
+	const socket = io();
+
 	let device = null;
 	let settings = {};
+
+	const Fs = 2.56e6; // Sample Rate, Hz
+	let Fo = 700e6; // center frequency, Hz
+	let span = 160e3; // Fstop - Fstart, Hz
+
+	let buffer = [];
+	let traces = [];
+	let peakHold = false;
+	let running = false;
+
+	const bufferLengthMax = 100;
+	const plotRateMax = 100;
+	const plotRateMin = 30;
+	let plotRate = 50; // ms
+	let overflow = false;
+	
+	let cycle = 0;
+	
+	let plotTmo;
+	let dataTimestamp;
+	let plotTimestamp;
+
 
 	const handleError = (jqXHR, textStatus, errorThrown) => {
 		$('.errors').text(textStatus);
@@ -66,7 +90,7 @@ $(document).ready(function()
 
 				if (!settings.initialized) {
 
-					set_setting('frequency', 700e6);
+					set_setting('frequency', Fo);
 					set_setting('sampleRate', 2.56e6);
 
 					set_setting('gainMode', 0);
@@ -84,6 +108,7 @@ $(document).ready(function()
 						handleError(null, err);
 					}, 
 					(freq) => {
+						Fo = freq;
 						$('#CF-ctl .val').text((freq / 1e6).toFixed(3) + ' MHz');
 					});
 
@@ -130,22 +155,6 @@ $(document).ready(function()
 			});
 	}, 5000);
 
-	const socket = io();
-
-	let buffer = [];
-	let traces = [];
-	let peakHold = false;
-	let running = false;
-	
-	const bufferLengthMax = 100;
-	const plotRateMax = 200;
-	const plotRateMin = 30;
-	let plotRate = 100; // ms
-	let overflow = false;
-	let cycle = 0;
-	let plotTmo;
-	let dataTimestamp;
-	let plotTimestamp;
 
 	// Receive data from server - fill buffer
 	socket.on('data', (data) => {
@@ -197,30 +206,45 @@ $(document).ready(function()
 
 		if (cycle % 10 == 0) {
 			$('.blink').toggleClass('on');
-			$('.ovf-ind').toggleClass('overflow', overflow).text((100 * bpc).toFixed(0) + '%, ' + plotRate + 'ms');
-		} 
+		}
+
+		$('.buffer-ind > span').css('right', 100 * (1 - bpc) + '%');
 
 		if (running && buffer.length > 0) {
 
-			const trace = buffer.shift();
-			const N = trace.length;
-			const span = trace[N - 1][0] - trace[0][0];
+			// each array in buffer is a DataView of UInt8Array
+			// values are 0..255 representing -130..-80 dBm
+			const y_values =  Array.from(new Uint8Array(buffer.shift()));
+
+			const N = y_values.length;
 			const rbw = span / N;
 
 			let max = -500;
-			let max_pt = 0;
-			for (let i = 0; i < trace.length; i++) {
-				if (trace[i][1] > max) {
-					max = trace[i][1];
-					max_pt = i;
+			let fmax = 0;
+			const scale = 50/255; // convert y-value into power
+
+			// loop through the data points and build an
+			// array of [ x, y ] points to plot
+			const trace = y_values.map((v, i) => {
+
+				const freq = ((Fo - span/2) + (i * rbw)) / 1e6; // frequency in MHz
+				const power = (v * scale) - 130; // dBm
+
+				if (power > max) {
+					max = power;
+					fmax = freq;
 				}
-			}
+
+				return [ freq, power ];
+			});
+
+			console.log(`Added new trace of length ${trace.length}`);
 
 			$('#N-ind').text(N + ' points');
-			$('#span-ind').text((span * 1e3).toFixed(3) + ' kHz');
-			$('#CF-ind').text((trace[0][0] + span/2).toFixed(3) + ' MHz');
-			$('#rbw-ind').text((rbw * 1e6).toFixed(0) + ' Hz');
-			$('#peak-ind').text(`${trace[max_pt][1].toFixed(1)} dBm @ ${trace[max_pt][0].toFixed(2)} MHz`);
+			$('#span-ind').text((span / 1e3).toFixed(3) + ' kHz');
+			$('#CF-ind').text((Fo / 1e6).toFixed(3) + ' MHz');
+			$('#rbw-ind').text((rbw / 1e3).toFixed(3) + ' kHz');
+			$('#peak-ind').text(`${max.toFixed(1)} dBm @ ${fmax.toFixed(2)} MHz`);
 
 			traces[0] = { label: 'data', data: trace };
 
@@ -229,7 +253,7 @@ $(document).ready(function()
 
 				plotData.plot = $.plot('#plot', traces, {
 					legend: {
-						show: true
+						show: false
 					},
 					series: {
 						shadowSize: 0
@@ -237,8 +261,8 @@ $(document).ready(function()
 					yaxis: {
 						axisLabel: 'Power [dBm]',
 						min: -130,
-						max: -30,
-						ticks: 10
+						max: -80,
+						ticks: 5
 					},
 					xaxis: {
 						axisLabel: 'Frequency [MHz]'
@@ -247,9 +271,9 @@ $(document).ready(function()
 
 			} else {
 
+				// plot is initialized - just redraw with new data
 				plotData.plot.setData(traces);
 				plotData.plot.draw();
-
 			}
 		}
 
@@ -405,7 +429,7 @@ $(document).ready(function()
 	}
 	.footer {
 		margin: 0 15px;
-		padding: 15px;
+		padding: 5px 0 15px 0;
 	}
 	.row {
 		margin-bottom: 5px;
@@ -415,6 +439,19 @@ $(document).ready(function()
 	}
 	.row:last-child {
 		margin-bottom: 0;
+	}
+	.buffer-ind {
+		position: relative;
+		width: 100%;
+		height: 2px;
+	}
+	.buffer-ind > span {
+		position: absolute;
+		left: 0;
+		top: 0;
+		bottom: 0;
+		right: 50%;
+		background-color: yellow;
 	}
 	.ind {
 		display: inline-block;
@@ -426,12 +463,6 @@ $(document).ready(function()
 	}
 	.ind > span {
 		margin-left: 5px;
-	}
-	.ovf-ind {
-		font-weight: 700;
-	}
-	.ovf-ind.overflow {
-		color: red;
 	}
 	.blink {
 		text-align: right;
@@ -524,13 +555,15 @@ $(document).ready(function()
 
 			<div class='footer'>
 				<div class='row'>
+					<div class='buffer-ind'><span></span></div>
+				</div>
+				<div class='row'>
 					<div class='ind'>CF:<span id='CF-ind'></span></div>
 					<div class='ind'>Peak:<span id='peak-ind'></span></div>
 					<div class='ind'>Span:<span id='span-ind'></span></div>
 				</div>
 				<div class='row'>
 					<div class='ind'>RBW:<span id='rbw-ind'></span></div>
-					<div class='ind ovf-ind'></div>
 					<div class='ind plotrate-ind'></div>
 					<div class='ind datarate-ind'></div>
 					<div class='ind'>N:<span id='N-ind'></span></div>
