@@ -358,7 +358,7 @@ function startData(onData, onEnd, logger) {
 			decimate = settings.decimate;
 			averages = settings.averages;
 			traces = [];
-		}
+		}		
 
 		// Process Raw ADC Data
 		//
@@ -415,19 +415,29 @@ function startData(onData, onEnd, logger) {
 			trace[n] = (trace[n - 1] + trace[n + 1]) / 2;
 		}
 
-		// bundle trace points with an x-axis value and use decibels for the y-values
-		const Fs = settings.Fs / settings.decimate;
-		const N = trace.length;
-		onData(trace.map((v, i) => {
-			
-			const freq = settings.Fo + (i * (Fs / (N - 1)) - Fs / 2);
+		// data trace output is also a Uint8Array
+		const buffer = Buffer.alloc(trace.length); // each trace value uses 1 byte
+		const scale = 255/80; // Uint8 range (0..255) divided by power range (-140..-60 dBm = 80 dB)
+
+		trace.forEach((v, i) => { 
+			// conver power to dBm
 			const power = 20 * Math.log10(v) - Log_Zo;
-			
-			return [ 
-				freq / 1e6, // return freq in MHz
-				power // power 
-			];
-		}));
+
+			// map dBm (-130 dBm to -80 dBm) to UInt8:
+			let power_uint8 = Math.floor(scale * (power + 140));
+
+			// clamp power_uint8 to (0..255)
+			if (power_uint8 < 0 || power_uint8 > 255) {
+				if (logger) logger.info(`[receiver] power out of range: ${power.toFixed(0)} dBm`);
+
+				if (power_uint8 < 0) power_uint8 = 0;
+				else power_uint8 = 255;
+			}
+
+			buffer.writeUInt8(power_uint8, i);
+		});
+
+		onData(buffer);
 	}
 
 	function _onEnd() {
