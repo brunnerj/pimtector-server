@@ -155,7 +155,7 @@ let connection = false;
 let running = false;
 
 // buffer data traces from receiver
-const buffer = [];
+const buffer = []; // array of ArrayBuffer()'s
 const bufferLengthMax = 10;
 
 const pushRateMax = 250;
@@ -187,6 +187,8 @@ io.on('connection', (socket) => {
 		process.stdout.write('\u001b[1000D' + bar + (100 * bpc).toFixed(0) + '%, ' + pushRate + ' ms (' + actualRate + ' ms) ' + ovl + '\x1b[K');
 
 		if (connection && running && buffer.length > 0) {
+
+			// TODO: maybe need a setTimeout(,0) here...
 			socket.emit('data', buffer.shift());
 
 			if (bpc > 0.7) {
