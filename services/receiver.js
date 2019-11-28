@@ -18,7 +18,7 @@ const settings = {
 	N: 2**13, // number of I/Q points used to process ADC raw data and sets the device buffer length
 	Fs: 2.56e6, // ADC sample rate, Hz
 
-	chunkDiv: 2, // Make chunks of N/chunkDiv lengths (1, 2, 4, 8, 16, ...)
+	chunkDiv: 1, // Make chunks of N/chunkDiv lengths (1, 2, 4, 8, 16, ...)
 	overlap: 0.5, // overlap chunks by this amount (0 to 1 is no overlap to 100%)
 
 	window: WINDOWS.blackman, // time-domain window weighting for the raw ADC data

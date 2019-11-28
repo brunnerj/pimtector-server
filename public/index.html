@@ -25,7 +25,7 @@ $(document).ready(function()
 	let peakHold = false;
 	let running = false;
 
-	const bufferLengthMax = 100;
+	const bufferLengthMax = 32;
 	const plotRateMax = 100;
 	const plotRateMin = 50;
 	const speedUpAt = 0.6; // buffer 60% full
@@ -231,15 +231,15 @@ $(document).ready(function()
 			// array of [ x, y ] points to plot
 			const trace = y_values.map((v, i) => {
 
-				const freq = ((Fo - span/2) + (i * rbw)) / 1e6; // frequency in MHz
+				const freq = Fo + (i * (Fs / (N - 1)) - Fs / 2); // frequency in MHz
 				const power = (v * scale) - 130; // dBm
 
 				if (power > max) {
 					max = power;
-					fmax = freq;
+					fmax = freq / 1e6;
 				}
 
-				return [ freq, power ];
+				return [ freq / 1e6, power ];
 			});
 
 			$('#N-ind').text(N + ' points');
