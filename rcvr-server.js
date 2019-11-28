@@ -162,6 +162,9 @@ const pushRateMax = 250;
 const pushRateMin = 20;
 let pushRate = pushRateMin;
 let pushTmo;
+const speedUpAt = 0.6; // buffer 60% full
+const slowDownAt = 0.4; // buffer at 40% full
+const rateBump = 10; // ms
 let overflow = false;
 
 let timestamp;
@@ -191,10 +194,10 @@ io.on('connection', (socket) => {
 			// TODO: maybe need a setTimeout(,0) here...
 			socket.emit('data', buffer.shift());
 
-			if (bpc > 0.7) {
-				pushRate = Math.max(pushRateMin, pushRate - 10);
-			} else if (bpc < 0.3) {
-				pushRate = Math.min(pushRateMax, pushRate + 10);
+			if (bpc > speedUpAt) {
+				pushRate = Math.max(pushRateMin, pushRate - rateBump);
+			} else if (bpc < slowDownAt) {
+				pushRate = Math.min(pushRateMax, pushRate + rateBump);
 			}
 
 		} else {

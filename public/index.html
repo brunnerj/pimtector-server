@@ -27,7 +27,10 @@ $(document).ready(function()
 
 	const bufferLengthMax = 100;
 	const plotRateMax = 100;
-	const plotRateMin = 30;
+	const plotRateMin = 50;
+	const speedUpAt = 0.6; // buffer 60% full
+	const slowDownAt = 0.4; // buffer at 40% full
+	const rateBump = 10; // ms
 	let plotRate = 50; // ms
 	let overflow = false;
 	
@@ -277,10 +280,10 @@ $(document).ready(function()
 		}
 
 		if (running) {
-			if (bpc > 0.7) {
-				plotRate = Math.max(plotRateMin, plotRate - 10);
-			} else if (bpc < 0.3) {
-				plotRate = Math.min(plotRateMax, plotRate + 10);
+			if (bpc > speedUpAt) {
+				plotRate = Math.max(plotRateMin, plotRate - rateBump);
+			} else if (bpc < slowDownAt) {
+				plotRate = Math.min(plotRateMax, plotRate + rateBump);
 			}
 
 		} else {
