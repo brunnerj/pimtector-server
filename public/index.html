@@ -18,7 +18,7 @@ $(document).ready(function()
 
 	const Fs = 2.56e6; // Sample Rate, Hz
 	let Fo = 700e6; // center frequency, Hz
-	let span = 160e3; // Fstop - Fstart, Hz
+	let span;
 
 	let buffer = [];
 	let traces = [];
@@ -82,16 +82,16 @@ $(document).ready(function()
 			}, 
 			(info) => {
 
-				device = info;
-
-				$('#vendor').text(device.vendor);
-				$('#product').text(device.product);
-				$('#serial').text(device.serial);
-
 				if (!settings.initialized) {
 
+					device = info;
+
+					$('#vendor').text(device.vendor);
+					$('#product').text(device.product);
+					$('#serial').text(device.serial);
+
 					set_setting('frequency', Fo);
-					set_setting('sampleRate', 2.56e6);
+					set_setting('sampleRate', Fs);
 
 					set_setting('gainMode', 0);
 					set_setting('agc', 0);
@@ -124,8 +124,9 @@ $(document).ready(function()
 					(err) => {
 						handleError(null, err);
 					}, 
-					(avgs) => {
-						$('#decimate-ctl .val').text(avgs);
+					(d) => {
+						span = Fs / d; // Hz
+						$('#decimate-ctl .val').text(d);
 					});
 
 				get_setting('offsetTuning',
