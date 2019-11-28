@@ -238,8 +238,6 @@ $(document).ready(function()
 				return [ freq, power ];
 			});
 
-			console.log(`Added new trace of length ${trace.length}`);
-
 			$('#N-ind').text(N + ' points');
 			$('#span-ind').text((span / 1e3).toFixed(3) + ' kHz');
 			$('#CF-ind').text((Fo / 1e6).toFixed(3) + ' MHz');
