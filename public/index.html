@@ -6,7 +6,7 @@
 <script src='/jquery.flot.resize.js'></script>
 <script src='/jquery.flot.axislabels.js'></script>
 <script src='/socket.io/socket.io.js'></script>
-<script type="text/javascript">
+<script type='text/javascript'>
 $(document).ready(function()
 {
 	'use strict';
@@ -22,12 +22,11 @@ $(document).ready(function()
 
 	let buffer = [];
 	let traces = [];
-	const MAX_TRACES = 4;
-	const TRACE_BASE_COLOR = "#F2C24F";
+	const MAX_TRACES = 8;
+	const TRACE_BASE_COLOR = { R: 242, G: 194, B: 79 }
 	const COLORS = [...Array(MAX_TRACES)].map((_, i) => {
-		const step = 15 / (MAX_TRACES - 1);
-		const c = 15 - i * step;
-		return TRACE_BASE_COLOR + c.toString(16).toUpperCase() + "F";
+		const c = 1 - (i / MAX_TRACES);
+		return 'rgba(' + TRACE_BASE_COLOR.R + ',' + TRACE_BASE_COLOR.G + ',' + TRACE_BASE_COLOR.B + ',' + c.toFixed(2) + ')';
 	});
 	let peakHold = false;
 	let running = false;
