@@ -22,6 +22,7 @@ $(document).ready(function()
 
 	let buffer = [];
 	let traces = [];
+	const MAX_TRACES = 4;
 	let peakHold = false;
 	let running = false;
 
@@ -242,13 +243,18 @@ $(document).ready(function()
 				return [ freq / 1e6, power ];
 			});
 
+			// Add trace to 0th position of traces array (traces go from
+			// newest at 0 to oldest at MAX_TRACES - 1).
+			traces.unshift({ data: trace });
+
+			if (traces.length >= MAX_TRACES)
+				traces.pop();
+
 			$('#N-ind').text(N + ' points');
 			$('#span-ind').text((span / 1e3).toFixed(3) + ' kHz');
 			$('#CF-ind').text((Fo / 1e6).toFixed(3) + ' MHz');
 			$('#rbw-ind').text((rbw / 1e3).toFixed(3) + ' kHz');
 			$('#peak-ind').text(`${max.toFixed(1)} dBm @ ${fmax.toFixed(2)} MHz`);
-
-			traces[0] = { label: 'data', data: trace };
 
 			if (!plotData.init) {
 				plotData.init = true;
