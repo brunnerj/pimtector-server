@@ -23,6 +23,12 @@ $(document).ready(function()
 	let buffer = [];
 	let traces = [];
 	const MAX_TRACES = 4;
+	const TRACE_BASE_COLOR = "#F2C24F";
+	const COLORS = [...Array(MAX_TRACES)].map((_, i) => {
+		const step = 15 / (MAX_TRACES - 1);
+		const c = 15 - i * step;
+		return TRACE_BASE_COLOR + c.toString(16).toUpperCase() + "F";
+	});
 	let peakHold = false;
 	let running = false;
 
@@ -266,6 +272,7 @@ $(document).ready(function()
 					series: {
 						shadowSize: 0
 					},
+					colors: COLORS,
 					yaxis: {
 						axisLabel: 'Power [dBm]',
 						min: -130,
