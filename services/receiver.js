@@ -284,7 +284,7 @@ function span(f_Hz) {
 // and the decimation factor (read-only).
 function points() {
 
-	return settings.N / settings.dspBlocks / settings.decimate;
+	return settings.N / 2 / settings.dspBlocks / settings.decimate;
 }
 
 
