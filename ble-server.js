@@ -112,8 +112,8 @@ bleno.on('accept', function(clientAddress) {
 	bleno.stopAdvertising();
 
 	// start battery and receiver service updates
-	batteryService.start(); 
 	receiverService.start();
+	batteryService.start(); 
 });
 
 

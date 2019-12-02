@@ -108,7 +108,7 @@ const standbyDetector = (err) => {
 }
 
 // callback when low battery output detected
-const lboDetector = (err) => {
+const lboDetector = async (err) => {
 
 	if (err) {
 		logger.error(`[standby-monitor] Error calling lboDetector: ${err}`);
@@ -127,8 +127,8 @@ const lboDetector = (err) => {
 	while (lbo.readSync() === Gpio.LOW && !halting) {
 
 		// halt if LBO stays low for HOLD TIME, but
-		// only check it every 10 seconds
-		sleep(10000).then(() => { 
+		// only check it every few seconds
+		await sleep(5000).then(() => { 
 			halting = (Date.now() - start_ms) > LBO_HOLD_TIME_ms;
 		});
 	}
