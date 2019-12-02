@@ -44,6 +44,12 @@ const lbo = new Gpio(GPIO_LBO_DETECT, 'in', 'falling', { debounceTimeout: 10 });
 const charging = new Gpio(GPIO_CHARGE_DETECT, 'in');
 const charged = new Gpio(GPIO_FULL_DETECT, 'in');
 
+// async sleep function to slow
+// LBO sensor loop down
+const sleep = (ms) => {
+	return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 
 // called to halt system
 const halt = () => {
@@ -120,7 +126,11 @@ const lboDetector = (err) => {
 
 	while (lbo.readSync() === Gpio.LOW && !halting) {
 
-		halting = (Date.now() - start_ms) > LBO_HOLD_TIME_ms;
+		// halt if LBO stays low for HOLD TIME, but
+		// only check it every 10 seconds
+		sleep(10000).then(() => { 
+			halting = (Date.now() - start_ms) > LBO_HOLD_TIME_ms;
+		});
 	}
 
 	if (halting) {
