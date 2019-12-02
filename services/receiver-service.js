@@ -19,6 +19,7 @@ const RECEIVER_CENTER_FREQ_CHAR_UUID	= '00010003-8d54-11e9-b475-0800200c9a66';
 const RECEIVER_SPAN_CHAR_UUID			= '00010004-8d54-11e9-b475-0800200c9a66';
 const RECEIVER_POINTS_CHAR_UUID			= '00010005-8d54-11e9-b475-0800200c9a66';
 
+let READY = false; // this set true in the Data characteristic
 
 function u16BufToOctet(u16Buf) {
 	const str = u16Buf.toString('hex');
@@ -57,7 +58,7 @@ class ReceiverInfoCharacteristic extends bleno.Characteristic {
 		this.logger = logger;
 	}
 
-	onReadRequest(offset, callback) {
+	async onReadRequest(offset, callback) {
 		try {
 			
 			const info = receiver.info(); // { vendor, product, serial }
@@ -71,6 +72,21 @@ class ReceiverInfoCharacteristic extends bleno.Characteristic {
 			const infoStr = `${info.vendor},${info.product},${info.serial}`;
 
 			this.logger.info(`[receiver-service] Returning receiver information: '${infoStr}'`);
+
+			// don't return info result until receiver READY indicated
+			const start_ms = Date.now();
+			let timedOut = false;
+			while (!READY && !timedOut) {
+				await sleep(500).then(() => {
+					timedOut = (Date.now() - start_ms) >= 10000; // try for 10 seconds
+				});
+			}
+
+			if (timedOut) {
+				this.logger.error('[receiver-service] receiver timed out waiting for READY');
+				callback(this.RESULT_SUCCESS, Buffer.from('ERROR ' + '100: Receiver not ready', 'utf8'));
+				return;
+			}
 
 			callback(this.RESULT_SUCCESS, Buffer.from(infoStr, 'utf8'));
 
@@ -151,7 +167,7 @@ class ReceiverCenterFreqCharacteristic extends bleno.Characteristic {
 				const result = receiver.frequency(fo_Hz);
 
 				if (result !== fo_Hz) {
-					this.logger.error(`[receiver-server] ${result}`);
+					this.logger.error(`[receiver-service] ${result}`);
 					callback(this.RESULT_UNLIKELY_ERROR);
 				}
 
@@ -360,13 +376,13 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 		}
 	}
 
-	start() {
+	async start() {
 		this.logger.info('[receiver-service] Starting receiver data characteristic');
 
 		// enable the receiver power bus
 		rx_pwr(true);
 
-		sleep(5000).then(() => {
+		await sleep(5000).then(() => {
 			// set some starting (or constant) receiver settings
 			const fs = receiver.sampleRate(2.56e6);
 			this.logger.info(`[receiver-service] Sample rate => ${fs} Hz`);
@@ -394,7 +410,7 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 			this.logger.info(`[receiver-service] Number of points => ${this.N}`);
 		});
 
-
+		READY = true;
 	}
 
 	stop() {
@@ -403,6 +419,8 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 		if (this.handle) 
 			this.onUnsubscribe();
 
+		READY = false;
+		
 		// disable receiver power bus
 		rx_pwr(false);
 	}
