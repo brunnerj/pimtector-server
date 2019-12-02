@@ -71,8 +71,6 @@ class ReceiverInfoCharacteristic extends bleno.Characteristic {
 
 			const infoStr = `${info.vendor},${info.product},${info.serial}`;
 
-			this.logger.info(`[receiver-service] Returning receiver information: '${infoStr}'`);
-
 			// don't return info result until receiver READY indicated
 			const start_ms = Date.now();
 			let timedOut = false;
@@ -88,6 +86,7 @@ class ReceiverInfoCharacteristic extends bleno.Characteristic {
 				return;
 			}
 
+			this.logger.info(`[receiver-service] Returning receiver information: '${infoStr}'`);
 			callback(this.RESULT_SUCCESS, Buffer.from(infoStr, 'utf8'));
 
 		} catch (err) {
@@ -153,7 +152,9 @@ class ReceiverCenterFreqCharacteristic extends bleno.Characteristic {
 		const fo = data.readUInt16LE(0); // MHz * 10
 		const fo_MHz = fo / 10;
 		const fo_Hz = fo * 1e5;
-
+		
+		this.logger.info(`[receiver-service] Request to set receiver center frequency => ${u16BufToOctet(data)} ${fo_MHz} MHz`);
+		
 		if (offset) {
 			callback(this.RESULT_ATTR_NOT_LONG);
 
@@ -171,12 +172,12 @@ class ReceiverCenterFreqCharacteristic extends bleno.Characteristic {
 					callback(this.RESULT_UNLIKELY_ERROR);
 				}
 
-				this.logger.info(`[receiver-service] Receiver center frequency set ${u16BufToOctet(data)} ${fo_MHz} MHz`);
+				this.logger.info(`[receiver-service] Successfully set receiver center frequency => ${u16BufToOctet(data)} ${fo_MHz} MHz`);
 				callback(this.RESULT_SUCCESS);
 
 			} catch (err) {
 
-				this.logger.error(`[receiver-service] ${err}`);
+				this.logger.error(`[receiver-service][ReceiverCenterFreqCharacteristic.onWriteRequest] ${err}`);
 				callback(this.RESULT_UNLIKELY_ERROR);
 			}
 	
@@ -420,7 +421,7 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 			this.onUnsubscribe();
 
 		READY = false;
-		
+
 		// disable receiver power bus
 		rx_pwr(false);
 	}
