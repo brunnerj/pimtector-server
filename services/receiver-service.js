@@ -64,7 +64,7 @@ class ReceiverInfoCharacteristic extends bleno.Characteristic {
 			const info = receiver.info(); // { vendor, product, serial }
 
 			if (typeof info === 'string') {
-				this.logger.error(`[receiver-service] ${info}`);
+				this.logger.error(`[receiver-service][ReceiverInfoCharacteristic.onReadRequest] ${info}`);
 				callback(this.RESULT_SUCCESS, Buffer.from('ERROR ' + '100: Receiver failure', 'utf8'));
 				return;
 			}
@@ -81,7 +81,7 @@ class ReceiverInfoCharacteristic extends bleno.Characteristic {
 			}
 
 			if (timedOut) {
-				this.logger.error('[receiver-service] receiver timed out waiting for READY');
+				this.logger.error('[receiver-service][ReceiverInfoCharacteristic.onReadRequest] receiver timed out waiting for READY');
 				callback(this.RESULT_SUCCESS, Buffer.from('ERROR ' + '100: Receiver not ready', 'utf8'));
 				return;
 			}
@@ -91,7 +91,7 @@ class ReceiverInfoCharacteristic extends bleno.Characteristic {
 
 		} catch (err) {
 
-			this.logger.error(`[receiver-service] ${err}`);
+			this.logger.error(`[receiver-service][ReceiverInfoCharacteristic.onReadRequest] ${err}`);
 			callback(this.RESULT_UNLIKELY_ERROR);
 		}
 	}
@@ -168,8 +168,7 @@ class ReceiverCenterFreqCharacteristic extends bleno.Characteristic {
 				const result = receiver.frequency(fo_Hz);
 
 				if (result !== fo_Hz) {
-					this.logger.error(`[receiver-service] ${result}`);
-					callback(this.RESULT_UNLIKELY_ERROR);
+					throw new Error(result);
 				}
 
 				this.logger.info(`[receiver-service] Successfully set receiver center frequency => ${u16BufToOctet(data)} ${fo_MHz} MHz`);
@@ -230,7 +229,7 @@ class ReceiverSpanCharacteristic extends bleno.Characteristic {
 
 		} catch (err) {
 
-			this.logger.error(`[receiver-service] ${err}`);
+			this.logger.error(`[receiver-service][ReceiverSpanCharacteristic.onReadRequest] ${err}`);
 			callback(this.RESULT_UNLIKELY_ERROR);
 		}
 	}
@@ -313,7 +312,7 @@ class ReceiverPointsCharacteristic extends bleno.Characteristic {
 
 		} catch (err) {
 
-			this.logger.error(`[receiver-service] ${err}`);
+			this.logger.error(`[receiver-service][ReceiverPointsCharacteristic.onReadRequest] ${err}`);
 			callback(this.RESULT_UNLIKELY_ERROR);
 		}
 	}
@@ -350,7 +349,7 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 
 		} catch (err) {
 
-			this.logger.error(`[receiver-service] ${err}`);
+			this.logger.error(`[receiver-service][ReceiverDataCharacteristic.onReadRequest] ${err}`);
 			callback(this.RESULT_UNLIKELY_ERROR);
 		}
 	}
