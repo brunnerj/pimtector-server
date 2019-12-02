@@ -142,7 +142,7 @@ class ReceiverCenterFreqCharacteristic extends bleno.Characteristic {
 
 		} catch (err) {
 
-			this.logger.error(`[receiver-service] ${err}`);
+			this.logger.error(`[receiver-service][ReceiverCenterFreqCharacteristic.onReadRequest] ${err}`);
 			callback(this.RESULT_UNLIKELY_ERROR);
 		}
 	}
