@@ -134,7 +134,7 @@ class ReceiverCenterFreqCharacteristic extends bleno.Characteristic {
 			const fo_MHz = fo_Hz / 1e6;
 			const fo_buf = Buffer.alloc(2);
 
-			fo_buf.writeUInt16LE(fo_Hz * 10); // MHz * 10
+			fo_buf.writeUInt16LE(fo_MHz * 10); // MHz * 10
 
 			this.logger.info(`[receiver-service] Returning receiver center frequency: ${u16BufToOctet(fo_buf)} ${fo_MHz} MHz`);
 
