@@ -23,7 +23,7 @@ const settings = {
 
 	window: WINDOWS.blackman, // time-domain window weighting for the raw ADC data
 
-	blocks: 2, // Each ADC chunk is split into this many blocks (time domain aliasing
+	dspBlocks: 2, // Each ADC chunk is split into this many blocks (time domain aliasing
 	// is used here, as blocks are added, point-by-point yielding an aliased time signal
 	// that is N/blocks long).  This is the so-called "Polyphase Filter Bank Technique".
 	// See e.g., https://www.embedded.com/dsp-tricks-building-a-practical-spectrum-analyzer/,
@@ -282,9 +282,9 @@ function span(f_Hz) {
 // from the raw acquisition (N), the blocks
 // used in the time-domain alias processing,
 // and the decimation factor (read-only).
-function points(n) {
+function points() {
 
-	return settings.N / settings.blocks / settings.decimate;
+	return settings.N / settings.dspBlocks / settings.decimate;
 }
 
 

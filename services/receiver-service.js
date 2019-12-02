@@ -25,6 +25,9 @@ function u16BufToOctet(u16Buf) {
 	return `<0x ${str.slice(0,2)} ${str.slice(2)}>`;
 } 
 
+function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 class ReceiverInfoCharacteristic extends bleno.Characteristic {
 	constructor(logger) {
@@ -170,7 +173,7 @@ class ReceiverSpanCharacteristic extends bleno.Characteristic {
 	constructor(logger) {
 		super({
 			uuid: RECEIVER_SPAN_CHAR_UUID,
-			properties: ['read', 'write'],
+			properties: ['read'],
 			descriptors: [
 				new bleno.Descriptor({
 					uuid: '2901',
@@ -215,6 +218,7 @@ class ReceiverSpanCharacteristic extends bleno.Characteristic {
 		}
 	}
 
+/*
 	onWriteRequest(data, offset, withoutResponse, callback) {
 
 		const span = data.readUInt16LE(0); // kHz * 10
@@ -248,6 +252,7 @@ class ReceiverSpanCharacteristic extends bleno.Characteristic {
 			}
 		}
 	}
+*/
 
 }
 
@@ -360,6 +365,36 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 
 		// enable the receiver power bus
 		rx_pwr(true);
+
+		sleep(5000).then(() => {
+			// set some starting (or constant) receiver settings
+			const fs = receiver.sampleRate(2.56e6);
+			this.logger.info(`[receiver-service] Sample rate => ${fs} Hz`);
+
+			// receiver hardware settings
+			receiver.gainMode(0);
+			receiver.agc(0);
+			receiver.gain(42);
+			receiver.offsetTuning(1);
+
+			// 'soft' settings
+			receiver.settings.decimate = 16;
+			receiver.settings.averages = 8;
+			receiver.settings.chunkDiv = 1;
+			receiver.settings.dspBlocks = 2;
+
+			// set initial center frequency and read span and points
+			this.frequency = receiver.frequency(725e6);
+			this.logger.info(`[receiver-service] Center frequency => ${this.frequency} Hz`);
+			
+			this.span = receiver.span();
+			this.logger.info(`[receiver-service] Frequency span => ${this.span} Hz`);
+			
+			this.N = receiver.points();
+			this.logger.info(`[receiver-service] Number of points => ${this.N}`);
+		});
+
+
 	}
 
 	stop() {
