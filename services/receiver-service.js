@@ -249,16 +249,11 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 
 		this.logger = logger;
 		this.name = 'receiver_data';
-
-		this.buffer = Buffer.alloc(2); // 2-byte buffer for 16 bit Int
-		this.buffer.writeInt16LE(-13000); // start at -130 dBm
+		this.buffer = Buffer.alloc(4); // Uint8 array
 	}
 
 	onReadRequest(offset, callback) {
 		try {
-			this.updateBuffer(true); // force update level on read requests, but don't notify
-
-			this.logger.info(`[receiver-service] Returning receiver result: ${result.toString('hex')} (${level / 100} dBm)`);
 
 			callback(this.RESULT_SUCCESS, this.buffer);
 
@@ -266,28 +261,6 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 
 			this.logger.error(`[receiver-service][ReceiverDataCharacteristic.onReadRequest] ${err}`);
 			callback(this.RESULT_UNLIKELY_ERROR);
-		}
-	}
-
-	updateBuffer(suppressNotify) {
-
-		let min = -130;
-		let max = -80;
-		let noise = 1.5;
-
-		const previous = this.buffer.readInt16LE(0) / 100;
-
-		min = Math.max(min, previous - noise);
-		max = Math.min(max, previous + noise);
-	
-		let p = Math.random() * (max - min) + min;
-	
-		p = Math.max(Math.min(p, max), min);
-	
-		this.buffer.writeInt16LE(p * 100);
-
-		if (!suppressNotify) {
-			this.notify();
 		}
 	}
 
@@ -341,20 +314,36 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 	}
 
 	onSubscribe(maxValueSize, updateValueCallback) {
-		this.logger.info(`[receiver-service] Receiver service subscribed, max value size is ${maxValueSize}`);
+		this.logger.info(`[receiver-service] Receiver service subscribing, max value size is ${maxValueSize}`);
 		this.updateValueCallback = updateValueCallback;
 
-		this.handle = setInterval(() => { 
-			this.updateBuffer();
-		}, 1000);
+		function onEnd() {
+			this.logger.info('[receiver-service][onSubscribe > onEnd] Receiver data stream stopped');
+		}
+
+		function onData(data) {
+			this.buffer.writeUInt8(data[0], 0);
+			this.buffer.writeUInt8(data[1], 1);
+			this.buffer.writeUInt8(data[2], 2);
+			this.buffer.writeUInt8(data[3], 3);
+
+			this.notify();
+		}
+
+		receiver.resetBuffer();
+
+		if (receiver.startData(onData.bind(this), onEnd.bind(this), this.logger)) {
+			this.logger.error('[receiver-service][onSubscribe] Error starting receiver data stream');
+		}
 	}
 
 	onUnsubscribe() {
-		this.logger.info('[receiver-service] Receiver service unsubscribed');
+		this.logger.info('[receiver-service] Receiver service unsubscribing');
 		this.updateValueCallback = null;
 
-		clearInterval(this.handle);
-		this.handle = null;
+		if (receiver.stopData()) {
+			this.logger.error('[receiver-service][onUnsubscribe] Error stopping receiver data stream');
+		}
 	}
 
 	notify() {
