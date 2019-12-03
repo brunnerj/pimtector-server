@@ -154,7 +154,7 @@ $(document).ready(function()
 						$('#chunkDiv-ctl .val').text(f);
 					});
 
-				get_setting('blocks',
+				get_setting('dspBlocks',
 					(err) => {
 						handleError(null, err);
 					}, 
@@ -352,10 +352,10 @@ $(document).ready(function()
 	});
 
 	$('#blocks-ctl').bind('click', (e) => {
-		const b = parseInt(prompt('Set block processing', settings.blocks));
+		const b = parseInt(prompt('Set block processing', settings.dspBlocks));
 
 		if (b && b >= 1 || b <= 16) {
-			set_setting('blocks', b);
+			set_setting('dspBlocks', b);
 		}
 	});
 

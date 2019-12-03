@@ -134,11 +134,11 @@ app.route('/chunkDiv')
 
 app.route('/blocks')
 	.get((req, res) => {
-		res.json(wrapResult('blocks', device.settings.blocks));
+		res.json(wrapResult('blocks', device.settings.dspBlocks));
 	})
 	.post((req, res) => {
-		device.settings.blocks = req.body.blocks;
-		res.json(wrapResult('blocks', device.settings.blocks));
+		device.settings.dspBlocks = req.body.dspBlocks;
+		res.json(wrapResult('dspBlocks', device.settings.dspBlocks));
 		buffer.length = 0;
 	});
 

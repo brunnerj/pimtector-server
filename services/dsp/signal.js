@@ -37,7 +37,7 @@ module.exports.signal = function(data, settings) {
 	Fs = settings.Fs;
 	D = settings.decimate;
 
-	const M = N / settings.blocks;
+	const M = N / settings.dspBlocks;
 	const adcLSB = settings.adcFullscaleVolts / (2 ** settings.adcBits);
 	const adcShift = (2 ** settings.adcBits - 1) / 2;
 
