@@ -237,7 +237,7 @@ $(document).ready(function()
 			// array of [ x, y ] points to plot
 			const trace = y_values.map((v, i) => {
 
-				const freq = Fo + (i * (Fs / (N - 1)) - Fs / 2); // frequency in MHz
+				const freq = Fo + (i * (Fs / (N - 1)) - Fs / 2); // frequency in Hz
 				const power = (v * scale) - 130; // dBm
 
 				if (power > max) {
