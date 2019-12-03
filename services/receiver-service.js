@@ -16,8 +16,7 @@ const RECEIVER_SERVICE_UUID				= '00010000-8d54-11e9-b475-0800200c9a66';
 const RECEIVER_INFO_CHAR_UUID			= '00010001-8d54-11e9-b475-0800200c9a66';
 const RECEIVER_DATA_CHAR_UUID			= '00010002-8d54-11e9-b475-0800200c9a66';
 const RECEIVER_CENTER_FREQ_CHAR_UUID	= '00010003-8d54-11e9-b475-0800200c9a66';
-const RECEIVER_SPAN_CHAR_UUID			= '00010004-8d54-11e9-b475-0800200c9a66';
-const RECEIVER_POINTS_CHAR_UUID			= '00010005-8d54-11e9-b475-0800200c9a66';
+const RECEIVER_SAMPLE_RATE_CHAR_UUID	= '00010004-8d54-11e9-b475-0800200c9a66';
 
 let READY = false; // this set true in the Data characteristic
 
@@ -185,15 +184,15 @@ class ReceiverCenterFreqCharacteristic extends bleno.Characteristic {
 
 }
 
-class ReceiverSpanCharacteristic extends bleno.Characteristic {
+class ReceiverSampleRateCharacteristic extends bleno.Characteristic {
 	constructor(logger) {
 		super({
-			uuid: RECEIVER_SPAN_CHAR_UUID,
+			uuid: RECEIVER_SAMPLE_RATE_CHAR_UUID,
 			properties: ['read'],
 			descriptors: [
 				new bleno.Descriptor({
 					uuid: '2901',
-					value: 'Receiver span frequency, Hz'
+					value: 'Receiver sample rate, Hz'
 				}),
 				new bleno.Descriptor({
 					uuid: '2904',
@@ -211,112 +210,28 @@ class ReceiverSpanCharacteristic extends bleno.Characteristic {
 		});
 
 		this.logger = logger;
-		this.name = 'receiver_span';
+		this.name = 'receiver_sample_rate';
 	}
 
 	onReadRequest(offset, callback) {
 		try {
 			
-			const span_Hz = receiver.span(); // Hz
-			const span_kHz = span_Hz / 1e3;
-			const span_buf = Buffer.alloc(2);
+			const fs_Hz = receiver.sampleRate(); // Hz
+			const fs_kHz = fs_Hz / 1e3;
+			const fs_buf = Buffer.alloc(2);
 
-			span_buf.writeUInt16LE(span_kHz * 10); // kHz * 10
+			fs_buf.writeUInt16LE(fs_kHz * 10); // kHz * 10
 
-			this.logger.info(`[receiver-service] Returning receiver span: ${u16BufToOctet(span_buf)} ${span_kHz} kHz`);
+			this.logger.info(`[receiver-service] Returning receiver sample rate: ${u16BufToOctet(fs_buf)} ${fs_kHz} kHz`);
 
-			callback(this.RESULT_SUCCESS, span_buf);
-
-		} catch (err) {
-
-			this.logger.error(`[receiver-service][ReceiverSpanCharacteristic.onReadRequest] ${err}`);
-			callback(this.RESULT_UNLIKELY_ERROR);
-		}
-	}
-
-/*
-	onWriteRequest(data, offset, withoutResponse, callback) {
-
-		const span = data.readUInt16LE(0); // kHz * 10
-		const span_kHz = span / 10;
-		const span_Hz = span_kHz * 1e3;
-
-		if (offset) {
-			callback(this.RESULT_ATTR_NOT_LONG);
-
-		} else if (data.length !== 2){
-			callback(this.RESULT_INVALID_ATTRIBUTE_LENGTH);
-
-		} else {
-
-			try {
-
-				const result = receiver.span(span_Hz);
-
-				if (result !== span_Hz) {
-					this.logger.error(`[receiver-server] ${result}`);
-					callback(this.RESULT_UNLIKELY_ERROR);
-				}
-
-				this.logger.info(`[receiver-service] Receiver span set ${u16BufToOctet(data)} ${span_kHz} kHz`);
-				callback(this.RESULT_SUCCESS);
-
-			} catch (err) {
-
-				this.logger.error(`[receiver-service] ${err}`);
-				callback(this.RESULT_UNLIKELY_ERROR);
-			}
-		}
-	}
-*/
-
-}
-
-class ReceiverPointsCharacteristic extends bleno.Characteristic {
-	constructor(logger) {
-		super({
-			uuid: RECEIVER_POINTS_CHAR_UUID,
-			properties: ['read'],
-			descriptors: [
-				new bleno.Descriptor({
-					uuid: '2901',
-					value: 'Receiver number of data points'
-				}),
-				new bleno.Descriptor({
-					uuid: '2904',
-					value: Buffer.from([ 
-						0x06, // format = uint16 (0 to 65,535)
-						0x00, // exponent = 0 (0 to 65,535 points)
-						0x00, // 0x2700: unitless
-						0x27,
-						0x01, // Bluetooth SIG namespace
-						0x00, // 0x0000: no description
-						0x00 
-					])
-				})
-			]
-		});
-
-		this.logger = logger;
-		this.name = 'receiver_points';
-	}
-
-	onReadRequest(offset, callback) {
-		try {
-			
-			const N = this.points.readInt16LE(0);
-
-			this.logger.info(`[receiver-service] Returning receiver points: <0x${N.toString(16).padStart(4, '0')}> (${N} points)`);
-
-			callback(this.RESULT_SUCCESS, this.points);
+			callback(this.RESULT_SUCCESS, fs_buf);
 
 		} catch (err) {
 
-			this.logger.error(`[receiver-service][ReceiverPointsCharacteristic.onReadRequest] ${err}`);
+			this.logger.error(`[receiver-service][ReceiverSampleRateCharacteristic.onReadRequest] ${err}`);
 			callback(this.RESULT_UNLIKELY_ERROR);
 		}
 	}
-
 }
 
 class ReceiverDataCharacteristic extends bleno.Characteristic {
@@ -456,20 +371,18 @@ class ReceiverService extends bleno.PrimaryService {
 		const _rcvrInfo = new ReceiverInfoCharacteristic(logger);
 		const _rcvrData = new ReceiverDataCharacteristic(logger);
 		const _rcvrCenterFreq = new ReceiverCenterFreqCharacteristic(logger);
-		const _rcvrSpan = new ReceiverSpanCharacteristic(logger);
-		const _rcvrPoints = new ReceiverPointsCharacteristic(logger);
+		const _rcvrSampleRate = new ReceiverSampleRateCharacteristic(logger);
 
 		super({
 			uuid: RECEIVER_SERVICE_UUID,
-			characteristics: [ _rcvrInfo, _rcvrData, _rcvrCenterFreq, _rcvrSpan, _rcvrPoints ]
+			characteristics: [ _rcvrInfo, _rcvrData, _rcvrCenterFreq, _rcvrSampleRate ]
 		});
 
 		this.name = 'receiver_service';
 		this.rcvrInfo = _rcvrInfo;
 		this.rcvrData = _rcvrData;
 		this.rcvrCenterFreq = _rcvrCenterFreq;
-		this.rcvrSpan = _rcvrSpan;
-		this.rcvrPoints = _rcvrPoints;
+		this.rcvrSampleRate = _rcvrSampleRate;
 	}
 
 	start() { 
