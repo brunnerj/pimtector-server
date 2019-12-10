@@ -250,7 +250,7 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 		this.logger = logger;
 		this.name = 'receiver_data';
 		this.buffer; // allocated in onSubscribe > onData, filled with data, then notify()
-		this.maxDataLength; // set in onSubscribe by the client
+		this.endIndex; // set in onSubscribe by the client
 	}
 
 	onReadRequest(offset, callback) {
@@ -317,19 +317,14 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 	onSubscribe(maxValueSize, updateValueCallback) {
 		this.logger.info(`[receiver-service] Receiver service subscribing, max value size is ${maxValueSize}`);
 		this.updateValueCallback = updateValueCallback;
-		this.maxDataLength = maxValueSize;
+		this.endIndex = maxValueSize + 1; // because we'll use slice() which is exclusive of the end index
 
 		function onEnd() {
 			this.logger.info('[receiver-service][onSubscribe > onEnd] Receiver data stream stopped');
 		}
 
 		function onData(data) {
-			this.buffer = data.slice(0, 4);
-			//this.buffer.writeUInt8(data[0], 0);
-			//this.buffer.writeUInt8(data[1], 1);
-			//this.buffer.writeUInt8(data[2], 2);
-			//this.buffer.writeUInt8(data[3], 3);
-
+			this.buffer = data.slice(0, this.endIndex);
 			this.notify();
 		}
 
@@ -352,7 +347,7 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 	notify() {
 		if (this.updateValueCallback && this.buffer && this.buffer.length) {
 
-			this.updateValueCallback(this.buffer.slice(0, this.maxDataLength));
+			this.updateValueCallback(this.buffer.slice(0, this.endIndex));
 		}
 	}
 }
