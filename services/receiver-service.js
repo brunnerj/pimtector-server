@@ -249,7 +249,7 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 
 		this.logger = logger;
 		this.name = 'receiver_data';
-		this.buffer = Buffer.alloc(4); // Uint8 array
+		this.buffer; // allocated in onSubscribe > onData, filled with data, then notify()
 	}
 
 	onReadRequest(offset, callback) {
@@ -322,10 +322,11 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 		}
 
 		function onData(data) {
-			this.buffer.writeUInt8(data[0], 0);
-			this.buffer.writeUInt8(data[1], 1);
-			this.buffer.writeUInt8(data[2], 2);
-			this.buffer.writeUInt8(data[3], 3);
+			this.buffer = data.slice(0, 4);
+			//this.buffer.writeUInt8(data[0], 0);
+			//this.buffer.writeUInt8(data[1], 1);
+			//this.buffer.writeUInt8(data[2], 2);
+			//this.buffer.writeUInt8(data[3], 3);
 
 			this.notify();
 		}
@@ -347,7 +348,7 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 	}
 
 	notify() {
-		if (this.updateValueCallback) {
+		if (this.updateValueCallback && this.buffer && this.buffer.length) {
 
 			this.updateValueCallback(this.buffer);
 		}
