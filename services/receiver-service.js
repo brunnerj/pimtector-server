@@ -217,7 +217,11 @@ class ReceiverSampleRateCharacteristic extends bleno.Characteristic {
 		try {
 			
 			const fs_Hz = receiver.sampleRate(); // Hz
-			const fs_kHz = fs_Hz / 1e3;
+
+			// Effective sample rate is Fs / decimation factor
+			const fsEffective_Hz = fs_Hz / receiver.settings.decimate;
+
+			const fs_kHz = fsEffective_Hz / 1e3;
 			const fs_buf = Buffer.alloc(2);
 
 			fs_buf.writeUInt16LE(fs_kHz * 10); // kHz * 10
