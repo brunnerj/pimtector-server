@@ -357,6 +357,8 @@ class ReceiverService extends bleno.PrimaryService {
 
 	async start() { 
 		await this.rcvrData.start().catch(err => {
+
+			// Stop (and turn off) the receiver service
 			this.rcvrData.stop();
 
 			// re-throw error to callers
