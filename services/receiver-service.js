@@ -18,8 +18,6 @@ const RECEIVER_DATA_CHAR_UUID			= '00010002-8d54-11e9-b475-0800200c9a66';
 const RECEIVER_CENTER_FREQ_CHAR_UUID	= '00010003-8d54-11e9-b475-0800200c9a66';
 const RECEIVER_SAMPLE_RATE_CHAR_UUID	= '00010004-8d54-11e9-b475-0800200c9a66';
 
-let READY = false; // this set true in the Data characteristic
-
 function u16BufToOctet(u16Buf) {
 	const str = u16Buf.toString('hex');
 	return `<0x ${str.slice(0,2)} ${str.slice(2)}>`;
@@ -69,21 +67,6 @@ class ReceiverInfoCharacteristic extends bleno.Characteristic {
 			}
 
 			const infoStr = `${info.vendor},${info.product},${info.serial}`;
-
-			// don't return info result until receiver READY indicated
-			const start_ms = Date.now();
-			let timedOut = false;
-			while (!READY && !timedOut) {
-				await sleep(500).then(() => {
-					timedOut = (Date.now() - start_ms) >= 10000; // try for 10 seconds
-				});
-			}
-
-			if (timedOut) {
-				this.logger.error('[receiver-service][ReceiverInfoCharacteristic.onReadRequest] receiver timed out waiting for READY');
-				callback(this.RESULT_SUCCESS, Buffer.from('ERROR ' + '100: Receiver not ready', 'utf8'));
-				return;
-			}
 
 			this.logger.info(`[receiver-service] Returning receiver information: '${infoStr}'`);
 			callback(this.RESULT_SUCCESS, Buffer.from(infoStr, 'utf8'));
@@ -301,14 +284,7 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 			
 			this.N = receiver.points();
 			this.logger.info(`[receiver-service] Number of points => ${this.N}`);
-
-			READY = true;
-
-		}).catch(err => {
-			this.logger.error(`[receiver-service] Error starting receiver data characteristic: ${err}`);
-			this.stop();
 		});
-
 	}
 
 	stop() {
@@ -316,8 +292,6 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 
 		if (this.handle) 
 			this.onUnsubscribe();
-
-		READY = false;
 
 		// disable receiver power bus
 		rx_pwr(false);
@@ -381,8 +355,13 @@ class ReceiverService extends bleno.PrimaryService {
 		this.rcvrSampleRate = _rcvrSampleRate;
 	}
 
-	start() { 
-		this.rcvrData.start();
+	async start() { 
+		await this.rcvrData.start().catch(err => {
+			this.rcvrData.stop();
+
+			// re-throw error to callers
+			throw err;
+		});
 	}
 
 	stop() { 
