@@ -301,9 +301,14 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 			
 			this.N = receiver.points();
 			this.logger.info(`[receiver-service] Number of points => ${this.N}`);
+
+			READY = true;
+
+		}).catch(err => {
+			this.logger.error(`[receiver-service] Error starting receiver data characteristic: ${err}`);
+			this.stop();
 		});
 
-		READY = true;
 	}
 
 	stop() {
