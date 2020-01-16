@@ -112,15 +112,27 @@ bleno.on('accept', function(clientAddress) {
 	bleno.stopAdvertising();
 
 	// start battery and receiver service updates
-	receiverService.start();
-	batteryService.start(); 
+	try {
+		batteryService.start(); 
+		receiverService.start();
+	} catch (err) {
+		logger.error(`[ble-server] Error starting services: ${err}`);
+		
+		// stop services and (re)start advertising
+		batteryService.stop(); 
+		receiverService.stop();
+		advertise();
+	}
 });
-
 
 // Notify the log that we have disconnected from a client
 // and start advertising
-bleno.on('disconnect', function(clientAddress) {
-	logger.info(`[ble-server] disconnect ${clientAddress}`);
+bleno.on('disconnect', (clientAddress) => {
+	if (!clientAddress) {
+		logger.info('[ble-server] server disconnect');
+	} else {
+		logger.info(`[ble-server] ${clientAddress} disconnect`);
+	}
 
 	// stop battery and receiver service updates
 	batteryService.stop(); 
