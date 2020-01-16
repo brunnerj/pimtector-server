@@ -261,6 +261,12 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 		await sleep(5000).then(() => {
 			// set some starting (or constant) receiver settings
 			const fs = receiver.sampleRate(2.56e6);
+
+			// throw here if we don't get a number back
+			if (typeof fs === 'string') {
+				throw new Error(`[receiver-service] ${fs}`);
+			}
+			
 			this.logger.info(`[receiver-service] Sample rate => ${fs} Hz`);
 
 			// receiver hardware settings
