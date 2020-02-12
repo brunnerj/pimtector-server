@@ -7,7 +7,6 @@ const { signal } = require('./dsp/signal');
 const { spectrum } = require('./dsp/spectrum');
 
 const Zo = 50;
-const Log_Zo = 20 * Math.log10(Zo);
 
 const settings = {
 
@@ -32,7 +31,14 @@ const settings = {
 
 	decimate: 16, // decimation factor to lower the effective sample rate to narrow the span
 
-	averages: 8 // combine this many spectral traces to make one displayed trace
+	averages: 8, // combine this many spectral traces to make one displayed trace
+
+	// Correction factors (lookup table) for frequency and power.
+	// Correction factor (cf) is linearly interpolated between frequency
+	// points. cf is looked up when center frequency changes. cf is in dB
+	// and is additive to receiver raw values. Values in table are [ freq (Hz), dB ]
+	// and table is monotonic in frequency.
+	correctionTable: [] // loaded from file, [ [f0, cf0], [f1, cf1], ..., [fN, cfN] ]
 }
 
 const ERRORS = {
@@ -210,6 +216,9 @@ function gain(g_dB) {
 	}
 }
 
+// currently unused, but can set a correction
+// factor for the reference oscillator used
+// on the receiver
 function freqCorrection(f_ppm) {
 
 	const dev = openDevice();
@@ -228,6 +237,7 @@ function freqCorrection(f_ppm) {
 	}
 }
 
+// gets/sets the receiver center frequency
 function frequency(f_Hz) {
 	
 	const dev = openDevice();
@@ -245,6 +255,7 @@ function frequency(f_Hz) {
 		const code = rtlsdr.set_center_freq(dev, f_Hz);
 		if (code) return error(470, code);
 		settings.Fo = f_Hz;
+
 		return f_Hz;
 	}
 }
@@ -330,6 +341,29 @@ function offsetTuning(enable) {
 }
 
 
+// Interpolate the correction factor from
+// center frequency
+function getCorrectionFactor(freq_Hz) {
+
+	if (!freq_Hz) return 0;
+
+	if (!settings.correctionTable || settings.correctionTable.length == 0) return 0;
+
+	if (freq_Hz <= settings.correctionTable[0][0]) return settings.correctionTable[0][1];
+
+	if (freq_Hz >= settings.correctionTable[settings.correctionTable.length - 1][0]) return settings.correctionTable[settings.correctionTable.length - 1][1];
+
+	// Else straight line interpolation:
+	// y = y1 + ((x - x1)/(x2 - x1)) * (y2 - y1)
+	const x = freq_Hz;
+	const i = settings.correctionTable.findIndex((cf) => cf[0] > x);
+	const x1 = settings.correctionTable[i - 1][0];
+	const y1 = settings.correctionTable[i - 1][1];
+	const x2 = settings.correctionTable[i][0];
+	const y2 = settings.correctionTable[i][1];
+
+	return y1 + ((x - x1)/(x2 - x1)) * (y2 - y1);
+}
 
 // ASYNC DATA
 function startData(onData, onEnd, logger) {
@@ -341,6 +375,7 @@ function startData(onData, onEnd, logger) {
 	let chunkDiv;
 	let decimate;
 	let averages;
+	let correctionFactor;
 	let traces;
 	let trace;
 
@@ -353,7 +388,9 @@ function startData(onData, onEnd, logger) {
 			Fo !== settings.Fo || 
 			decimate !== settings.decimate || 
 			chunkDiv !== settings.chunkDiv) {
+
 			Fo = settings.Fo;
+			correctionFactor = getCorrectionFactor(Fo);
 			chunkDiv = settings.chunkDiv;
 			decimate = settings.decimate;
 			averages = settings.averages;
@@ -421,7 +458,7 @@ function startData(onData, onEnd, logger) {
 
 		trace.forEach((v, i) => { 
 			// conver power to dBm
-			const power = 20 * Math.log10(v) - Log_Zo;
+			const power = 20 * Math.log10(v / Zo) + correctionFactor;
 
 			// map dBm (-130 dBm to -80 dBm) to UInt8:
 			let power_uint8 = Math.floor(scale * (power + 140));
