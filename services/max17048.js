@@ -6,7 +6,7 @@
  */
 const i2c = require('async-i2c-bus');
 
-const address = 0x36;
+const ADDRESS = 0x36;
 
 // registers
 const REGISTER_VCELL = 0x02;
@@ -30,9 +30,9 @@ module.exports = class Max17048
 
 	async init() {
 		// no try/catch - callers must wrap in their own
-		await i2c.Bus().open();
-		this.device = i2c.Device({ address: address, bus });
-		this.logger.info(`[MAX17048] battery fuel gauge at i2c address 0x${address.toString(16)} opened`);
+		const bus = await i2c.Bus().open();
+		this.device = i2c.Device({ address: ADDRESS, bus });
+		this.logger.info(`[MAX17048] battery fuel gauge at i2c address 0x${ADDRESS.toString(16)} opened`);
 	}
 
 	async readRegister(register) {

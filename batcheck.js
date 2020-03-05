@@ -33,8 +33,10 @@ const max17048 = new Max17048(logger);
 	// initialize fuel gauge
 	try {
 		await max17048.init();
+
 	} catch(err) {
 		logger.error(`[batcheck] ${err}`);
+		return;
 	}
 
 	// read fuel level
