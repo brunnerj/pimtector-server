@@ -33,6 +33,7 @@ const max17048 = new Max17048(logger);
 	// initialize fuel gauge
 	try {
 		await max17048.init();
+		logger.info('[batcheck] Battery fuel gauge initialized.');
 
 	} catch(err) {
 		logger.error(`[batcheck] ${err}`);
@@ -48,7 +49,7 @@ const max17048 = new Max17048(logger);
 		// cap between 0 and 100
 		const level = Buffer.from([ Math.min(100, Math.max(0, soc * 100)) ]);
 
-		logger.info(`[batcheck] Battery level notification: ${level.readUInt8(0)}%`);
+		logger.info(`[batcheck] Battery level: ${level.readUInt8(0)}%`);
 
 	} catch(err) {
 		logger.error(`[batcheck] ${err}`);

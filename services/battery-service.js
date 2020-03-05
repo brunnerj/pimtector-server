@@ -41,38 +41,49 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 		this.updateDelay_ms = 30000; // how long to wait between battery level poll
 	}
 
-	updateLevel(suppressNotify) {
+	async updateLevel(suppressNotify) {
 
 		const prevLevel = this.level.readUInt8(0);
 		
-		this.max17048.getStateOfCharge()
-			.then(soc => {
-				
-				// cap between 0 and 100
-				const newLevel = Math.min(100, Math.max(0, soc * 100));
-				
-				this.time = new Date();
-				this.level = Buffer.from([ newLevel ]);
+		let soc;
+		try {
+			soc = await this.max17048.getStateOfCharge();
 
-				if (!suppressNotify && prevLevel !== this.level.readUInt8(0)) {
-					this.notify();
-				}
-			})
-			.catch(err => { 
-				this.logger.error(`[battery-service] ${err}`);
-			});
+			// cap between 0 and 100
+			const newLevel = Math.min(100, Math.max(0, soc * 100));
+		
+			this.time = new Date();
+			this.level = Buffer.from([ newLevel ]);
+
+			if (!suppressNotify && prevLevel !== this.level.readUInt8(0)) {
+				this.notify();
+			}
+
+		} catch(err) {
+
+			this.logger.error(`[battery-service] ${err}`);
+		}
 	}
 
-	start() {
+	async start() {
 		this.logger.info('[battery-service] Starting battery service level monitor');
 
-		this.max17048.init(() => {
-			this.updateLevel();
+		try {
+			await this.max17048.init();
+		} catch(err) {
+			this.logger.error(`[battery-service] ${err}`);
+		}
+
+		try {
+			await this.updateLevel();
 
 			this.handle = setInterval(() => { 
 				this.updateLevel();
 			}, this.updateDelay_ms);	
-		})
+
+		} catch(err) {
+			this.logger.error(`[battery-service] ${err}`);
+		}
 	}
 
 	stop() {
