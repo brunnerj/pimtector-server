@@ -386,23 +386,12 @@ class ReceiverService extends bleno.PrimaryService {
 		this.rcvrSampleRate = _rcvrSampleRate;
 	}
 
-	start() { 
-		
-		// rcvrData.start() is async
-		this.rcvrData.start().catch((err) => {
-
-			// Stop (and turn off) the receiver service
-			this.rcvrData.stop();
-
-			// re-throw error to callers
-			throw err;
-		});
+	start() {
+		this.rcvrData.start();
 	}
 
 	stop() { 
-		this.rcvrData.stop().catch((err) => {
-			this.logger.error(`[receiver-service 406] ${err}`);
-		});
+		this.rcvrData.stop();
 	}
 }
 

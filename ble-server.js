@@ -129,6 +129,8 @@ bleno.on('disconnect', (clientAddress) => {
 		logger.info(`[ble-server] ${clientAddress} disconnect`);
 	}
 
+	console.log('****** HERE I WILL STOP SERVICES!!!');
+
 	// stop battery and receiver service updates
 	batteryService.stop(); 
 	receiverService.stop();
