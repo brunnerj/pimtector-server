@@ -53,7 +53,7 @@ const advertise = () => {
 		deviceInformationService.uuid, 
 		batteryService.uuid 
 	], err => {
-		if (err) logger.error(`[ble-server] ${err}`);
+		if (err) logger.error(`[ble-server] advertise ${err}`);
 	});
 }
 
@@ -76,7 +76,7 @@ bleno.on('stateChange', state => {
 
 // Configure the services when advertising starts
 bleno.on('advertisingStart', err => {
-	logger.info('[ble-server] advertisingStart')
+	logger.info('[ble-server] advertisingStart');
 
 	if(err) {
 		logger.error(`[ble-server] ${err}`);
@@ -132,6 +132,8 @@ bleno.on('disconnect', (clientAddress) => {
 	// stop battery and receiver service updates
 	batteryService.stop(); 
 	receiverService.stop();
+
+	console.log('****** HERE I SHOULD RESTART ADVERTISING!!!');
 
 	// start advertising BLE
 	advertise();

@@ -318,14 +318,14 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 	stop() {
 		this.logger.info('[receiver-service] Stopping receiver data characteristic');
 
+		// disable receiver power bus
+		rx_pwr(false);
+
 		if (this.handle) 
 			this.onUnsubscribe();
 
 		// clear receiver correction table
 		receiver.settings.correctionTable = [];
-
-		// disable receiver power bus
-		rx_pwr(false);
 	}
 
 	onSubscribe(maxValueSize, updateValueCallback) {
@@ -392,9 +392,7 @@ class ReceiverService extends bleno.PrimaryService {
 		this.rcvrData.start().catch((err) => {
 
 			// Stop (and turn off) the receiver service
-			this.rcvrData.stop().catch((err) => {
-				this.logger.error(`[receiver-service 396] ${err}`);
-			});
+			this.rcvrData.stop();
 
 			// re-throw error to callers
 			throw err;
