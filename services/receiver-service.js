@@ -27,6 +27,10 @@ function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+async function loadCorrectionTable(table) {
+	
+}
+
 class ReceiverInfoCharacteristic extends bleno.Characteristic {
 	constructor(logger) {
 		super({
@@ -258,6 +262,8 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 		// enable the receiver power bus
 		rx_pwr(true);
 
+		await loadCorrectionTable(receiver.settings.correctionTable);
+
 		await sleep(5000).then(() => {
 			// set some starting (or constant) receiver settings
 			const fs = receiver.sampleRate(2.56e6);
@@ -298,6 +304,9 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 
 		if (this.handle) 
 			this.onUnsubscribe();
+
+		// clear receiver correction table
+		receiver.settings.correctionTable = [];
 
 		// disable receiver power bus
 		rx_pwr(false);
