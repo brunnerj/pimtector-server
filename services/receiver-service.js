@@ -20,7 +20,10 @@ async function rx_pwr(enable) {
 
 	// wait a bit after power up
 	if (enable) {
+
+		console.log('Waiting for Rx power up...');
 		await sleep(RX_PWR_WAIT);
+		console.log('...done waiting for Rx power up.');
 	}
 }
 
@@ -265,29 +268,35 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 		}
 	}
 
-	async start() {
+	start() {
 		this.logger.info('[receiver-service] Starting receiver data characteristic');
 
-		try {
-			// enable the receiver power bus
-			await rx_pwr(true);
-		} catch(err) {
-			throw err;
-		}
-
-		try {
-			// load the correction table
-			await loadCorrectionTable(receiver.settings.correctionTable);
-		} catch(err) {
-			throw err;
-		}
+		// enable the receiver power bus
+		this.logger.info('[receiver-service] Enabling receiver power.');
+		rx_pwr(true)
+			.then(() => {
+				this.logger.info('[receiver-service] Reciever power enabled.');
+				this.logger.info('[receiver-service] Loading corrections table.');
+				loadCorrectionTable(receiver.settings.correctionTable)
+					.then(() => {
+						this.logger.info('[receiver-service] Corrections table loaded.');
+					})
+					.catch((err) => {
+						this.logger.error(`[receiver-service] ${err}`);
+						throw err;
+					});
+			}).catch((err) => {
+				this.logger.error(`[receiver-service] ${err}`);
+				throw err;
+			});
 
 		// set some starting (or constant) receiver settings
 		const fs = receiver.sampleRate(2.56e6);
 
 		// Reject here if we don't get a number back
 		if (typeof fs === 'string') {
-			throw `[receiver-service] setting sample rate ${fs}`;
+			this.logger.error(`[receiver-service] ${fs}`);
+			throw fs;
 		}
 			
 		this.logger.info(`[receiver-service] Sample rate => ${fs} Hz`);
@@ -318,14 +327,14 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 	stop() {
 		this.logger.info('[receiver-service] Stopping receiver data characteristic');
 
-		// disable receiver power bus
-		rx_pwr(false);
-
 		if (this.handle) 
 			this.onUnsubscribe();
 
 		// clear receiver correction table
 		receiver.settings.correctionTable = [];
+
+		// disable receiver power bus
+		rx_pwr(false);
 	}
 
 	onSubscribe(maxValueSize, updateValueCallback) {

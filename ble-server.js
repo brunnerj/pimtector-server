@@ -113,10 +113,15 @@ bleno.on('accept', function(clientAddress) {
 
 	// start battery and receiver service updates
 	try {
-		batteryService.start(); 
+		batteryService.start();
+	} catch(err) {
+		logger.error(`[ble-server] Error starting battery service: ${err}`);
+	}
+
+	try {
 		receiverService.start();
-	} catch (err) {
-		logger.error(`[ble-server] Error starting services: ${err}`);
+	} catch(err) {
+		logger.error(`[ble-server] Error starting receiver service: ${err}`);
 	}
 });
 

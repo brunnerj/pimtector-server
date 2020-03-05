@@ -65,25 +65,32 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 		}
 	}
 
-	async start() {
+	start() {
 		this.logger.info('[battery-service] Starting battery service level monitor');
 
-		try {
-			await this.max17048.init();
-		} catch(err) {
-			this.logger.error(`[battery-service] ${err}`);
-		}
+		this.max17048.init()
+			.then(() => {
+				this.updateLevel()
+					.then(() => {
 
-		try {
-			await this.updateLevel();
+						this.handle = setInterval(async () => { 
+							try {
+								await this.updateLevel();
+							} catch(err) {
+								this.logger.error(`[battery-service] ${err}`);
+							}
+						}, this.updateDelay_ms);
 
-			this.handle = setInterval(() => { 
-				this.updateLevel();
-			}, this.updateDelay_ms);	
-
-		} catch(err) {
-			this.logger.error(`[battery-service] ${err}`);
-		}
+					})
+					.catch((err) => {
+						this.logger.error(`[battery-service] ${err}`);
+						throw err;
+					});
+			})
+			.catch((err) => {
+				this.logger.error(`[battery-service] ${err}`);
+				throw err;
+			});
 	}
 
 	stop() {
@@ -94,21 +101,22 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 	}
 
 	onReadRequest(offset, callback) {
-		try {
-			this.updateLevel(true); // force update level on read requests, but don't notify
+		// force update level on read requests, but don't notify
+		this.updateLevel(true)
+			.then(() => {
+				const level = this.level.readUInt8(0);
 
-			const level = this.level.readUInt8(0);
+				this.logger.info(`[battery-service] Returning battery result: <0x${level.toString(16).padStart(2, '0')}> ${level}%`);
+	
+				callback(this.RESULT_SUCCESS, this.level);
+			})
+			.catch((err) => {
 
-			this.logger.info(`[battery-service] Returning battery result: <0x${level.toString(16).padStart(2, '0')}> ${level}%`);
-
-			callback(this.RESULT_SUCCESS, this.level);
-
-		} catch (err) {
-
-			this.logger.error(`[battery-service] ${err}`);
-			callback(this.RESULT_UNLIKELY_ERROR);
-		}
+				this.logger.error(`[battery-service] ${err}`);
+				callback(this.RESULT_UNLIKELY_ERROR);
+			});
 	}
+
 
 	onSubscribe(maxValueSize, updateValueCallback) {
 		this.logger.info(`[battery-service] Battery level subscribed, max value size is ${maxValueSize}`);
