@@ -26,7 +26,9 @@ module.exports = class Max17048
 	constructor(logger) {
 
 		this.logger = logger;
+	}
 
+	init(callback) {
 		i2c.Bus().open()
 			.then((bus) => {
 				this.device = i2c.Device({ address: address, bus});
@@ -35,6 +37,8 @@ module.exports = class Max17048
 			.catch(err => { 
 				throw err; 
 			});
+		
+		if (callback) callback.bind(this)();
 	}
 
 	async readRegister(register) {
