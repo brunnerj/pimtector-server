@@ -37,7 +37,7 @@ function sleep(ms) {
 }
 
 async function loadCorrectionTable(table) {
-	
+	// TODO: Load corrections from file
 }
 
 class ReceiverInfoCharacteristic extends bleno.Characteristic {
@@ -271,19 +271,23 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 		try {
 			// enable the receiver power bus
 			await rx_pwr(true);
-
-			await loadCorrectionTable(receiver.settings.correctionTable);
-
-			// set some starting (or constant) receiver settings
-			const fs = receiver.sampleRate(2.56e6);
-
-			// throw here if we don't get a number back
-			if (typeof fs === 'string') {
-				throw new Error(`[receiver-service] ${fs}`);
-			}
 		} catch(err) {
-			// just re-throw for caller to handle
-			throw Error(err);
+			throw err;
+		}
+
+		try {
+			// load the correction table
+			await loadCorrectionTable(receiver.settings.correctionTable);
+		} catch(err) {
+			throw err;
+		}
+
+		// set some starting (or constant) receiver settings
+		const fs = receiver.sampleRate(2.56e6);
+
+		// Reject here if we don't get a number back
+		if (typeof fs === 'string') {
+			throw `[receiver-service] setting sample rate ${fs}`;
 		}
 			
 		this.logger.info(`[receiver-service] Sample rate => ${fs} Hz`);
@@ -382,14 +386,14 @@ class ReceiverService extends bleno.PrimaryService {
 		this.rcvrSampleRate = _rcvrSampleRate;
 	}
 
-	async start() { 
-		await this.rcvrData.start().catch(err => {
-
+	start() { 
+		
+		this.rcvrData.start().catch((err) => {
 			// Stop (and turn off) the receiver service
 			this.rcvrData.stop();
 
 			// re-throw error to callers
-			throw err;
+			throw new Error(err);
 		});
 	}
 
