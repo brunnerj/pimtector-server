@@ -388,10 +388,13 @@ class ReceiverService extends bleno.PrimaryService {
 
 	start() { 
 		
+		// rcvrData.start() is async
 		this.rcvrData.start().catch((err) => {
 
 			// Stop (and turn off) the receiver service
-			this.rcvrData.stop();
+			this.rcvrData.stop().catch((err) => {
+				this.logger.error(`[receiver-service 396] ${err}`);
+			});
 
 			// re-throw error to callers
 			throw err;
@@ -399,7 +402,9 @@ class ReceiverService extends bleno.PrimaryService {
 	}
 
 	stop() { 
-		this.rcvrData.stop();
+		this.rcvrData.stop().catch((err) => {
+			this.logger.error(`[receiver-service 406] ${err}`);
+		});
 	}
 }
 
