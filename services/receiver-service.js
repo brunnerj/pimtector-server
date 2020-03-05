@@ -68,7 +68,7 @@ class ReceiverInfoCharacteristic extends bleno.Characteristic {
 		this.logger = logger;
 	}
 
-	async onReadRequest(offset, callback) {
+	onReadRequest(offset, callback) {
 		try {
 			
 			const info = receiver.info(); // { vendor, product, serial }
@@ -393,7 +393,7 @@ class ReceiverService extends bleno.PrimaryService {
 			this.rcvrData.stop();
 
 			// re-throw error to callers
-			throw new Error(err);
+			throw err;
 		});
 	}
 
