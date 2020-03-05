@@ -10,8 +10,12 @@ const Gpio = require('onoff').Gpio;
 const GPIO_RX_EN = 13; // Enable/disable the receiver (RX) USB power bus (GPIO PIN33 == GPIO13)
 const rcvr_en = new Gpio(GPIO_RX_EN, 'out');
 
+function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 const RX_PWR_WAIT = 5000;
-const rx_pwr = async (enable) => { 
+async function rx_pwr(enable) { 
 	rcvr_en.writeSync(enable ? Gpio.HIGH : Gpio.LOW);
 
 	// wait a bit after power up
@@ -31,10 +35,6 @@ function u16BufToOctet(u16Buf) {
 	const str = u16Buf.toString('hex');
 	return `<0x ${str.slice(0,2)} ${str.slice(2)}>`;
 } 
-
-function sleep(ms) {
-	return new Promise(resolve => setTimeout(resolve, ms));
-}
 
 async function loadCorrectionTable(table) {
 	// TODO: Load corrections from file
@@ -388,17 +388,20 @@ class ReceiverService extends bleno.PrimaryService {
 
 	start() { 
 		
-		this.rcvrData.start().catch((err) => {
+		try {
+			this.rcvrData.start();
+		} catch(err) {
+
 			// Stop (and turn off) the receiver service
-			this.rcvrData.stop();
+			this.rcvrData.stop().catch();
 
 			// re-throw error to callers
 			throw err;
-		});
+		}
 	}
 
 	stop() { 
-		this.rcvrData.stop();
+		this.rcvrData.stop().catch();
 	}
 }
 
