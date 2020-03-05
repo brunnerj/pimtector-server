@@ -66,12 +66,13 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 	}
 
 	start() {
-		this.logger.info('[battery-service] Starting battery service level monitor');
+		this.logger.info('[battery-service] Starting battery service');
 
 		this.max17048.init()
 			.then(() => {
 				this.updateLevel()
 					.then(() => {
+						this.logger.info('[battery-service] Battery service started');
 
 						this.handle = setInterval(async () => { 
 							try {
@@ -94,7 +95,7 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 	}
 
 	stop() {
-		this.logger.info('[battery-service] Stopping battery service level monitor');
+		this.logger.info('[battery-service] Stopping battery service');
 
 		clearInterval(this.handle);
 		this.handle = null;

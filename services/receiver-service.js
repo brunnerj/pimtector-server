@@ -269,10 +269,11 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 	}
 
 	start() {
-		this.logger.info('[receiver-service] Starting receiver data characteristic');
+		this.logger.info('[receiver-service] Starting receiver service');
 
 		// enable the receiver power bus
 		this.logger.info('[receiver-service] Enabling receiver power.');
+		
 		rx_pwr(true)
 			.then(() => {
 				this.logger.info('[receiver-service] Reciever power enabled.');
