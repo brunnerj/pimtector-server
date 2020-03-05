@@ -27,8 +27,17 @@ const Max17048 = require('./services/max17048');
 // init MAX17048 device
 const max17048 = new Max17048(logger);
 
-max17048.init(async () => {
+// wrapped in async until top-level awaits become available
+(async () => {
 
+	// initialize fuel gauge
+	try {
+		await max17048.init();
+	} catch(err) {
+		logger.error(`[batcheck] ${err}`);
+	}
+
+	// read fuel level
 	let soc;
 
 	try {
@@ -40,8 +49,7 @@ max17048.init(async () => {
 		logger.info(`[batcheck] Battery level notification: ${level.readUInt8(0)}%`);
 
 	} catch(err) {
-		
 		logger.error(`[batcheck] ${err}`);
-
 	}
-});
+
+})();
