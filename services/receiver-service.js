@@ -9,7 +9,16 @@ const receiver = require('./receiver');
 const Gpio = require('onoff').Gpio;
 const GPIO_RX_EN = 13; // Enable/disable the receiver (RX) USB power bus (GPIO PIN33 == GPIO13)
 const rcvr_en = new Gpio(GPIO_RX_EN, 'out');
-const rx_pwr = (enable) => { rcvr_en.writeSync(enable ? Gpio.HIGH : Gpio.LOW) }
+
+const RX_PWR_WAIT = 5000;
+const rx_pwr = async (enable) => { 
+	rcvr_en.writeSync(enable ? Gpio.HIGH : Gpio.LOW);
+
+	// wait a bit after power up
+	if (enable) {
+		await sleep(RX_PWR_WAIT);
+	}
+}
 
 const RECEIVER_SERVICE_UUID				= '00010000-8d54-11e9-b475-0800200c9a66';
 
@@ -260,43 +269,41 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 		this.logger.info('[receiver-service] Starting receiver data characteristic');
 
 		// enable the receiver power bus
-		rx_pwr(true);
+		await rx_pwr(true);
 
 		await loadCorrectionTable(receiver.settings.correctionTable);
 
-		await sleep(5000).then(() => {
-			// set some starting (or constant) receiver settings
-			const fs = receiver.sampleRate(2.56e6);
+		// set some starting (or constant) receiver settings
+		const fs = receiver.sampleRate(2.56e6);
 
-			// throw here if we don't get a number back
-			if (typeof fs === 'string') {
-				throw new Error(`[receiver-service] ${fs}`);
-			}
+		// throw here if we don't get a number back
+		if (typeof fs === 'string') {
+			throw new Error(`[receiver-service] ${fs}`);
+		}
 			
-			this.logger.info(`[receiver-service] Sample rate => ${fs} Hz`);
+		this.logger.info(`[receiver-service] Sample rate => ${fs} Hz`);
 
-			// receiver hardware settings
-			receiver.gainMode(0);
-			receiver.agc(0);
-			receiver.gain(42);
-			receiver.offsetTuning(1);
+		// receiver hardware settings
+		receiver.gainMode(0);
+		receiver.agc(0);
+		receiver.gain(42);
+		receiver.offsetTuning(1);
 
-			// 'soft' settings
-			receiver.settings.decimate = 16;
-			receiver.settings.averages = 8;
-			receiver.settings.chunkDiv = 1;
-			receiver.settings.dspBlocks = 2;
+		// 'soft' settings
+		receiver.settings.decimate = 16;
+		receiver.settings.averages = 8;
+		receiver.settings.chunkDiv = 1;
+		receiver.settings.dspBlocks = 2;
 
-			// set initial center frequency and read span and points
-			this.frequency = receiver.frequency(725e6);
-			this.logger.info(`[receiver-service] Center frequency => ${this.frequency} Hz`);
-			
-			this.span = receiver.span();
-			this.logger.info(`[receiver-service] Frequency span => ${this.span} Hz`);
-			
-			this.N = receiver.points();
-			this.logger.info(`[receiver-service] Number of points => ${this.N}`);
-		});
+		// set initial center frequency and read span and points
+		this.frequency = receiver.frequency(725e6);
+		this.logger.info(`[receiver-service] Center frequency => ${this.frequency} Hz`);
+		
+		this.span = receiver.span();
+		this.logger.info(`[receiver-service] Frequency span => ${this.span} Hz`);
+		
+		this.N = receiver.points();
+		this.logger.info(`[receiver-service] Number of points => ${this.N}`);
 	}
 
 	stop() {
