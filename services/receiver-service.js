@@ -393,7 +393,7 @@ class ReceiverService extends bleno.PrimaryService {
 		} catch(err) {
 
 			// Stop (and turn off) the receiver service
-			this.rcvrData.stop().catch();
+			this.rcvrData.stop();
 
 			// re-throw error to callers
 			throw err;
@@ -401,7 +401,7 @@ class ReceiverService extends bleno.PrimaryService {
 	}
 
 	stop() { 
-		this.rcvrData.stop().catch();
+		this.rcvrData.stop();
 	}
 }
 
