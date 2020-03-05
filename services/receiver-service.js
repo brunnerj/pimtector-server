@@ -268,17 +268,22 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 	async start() {
 		this.logger.info('[receiver-service] Starting receiver data characteristic');
 
-		// enable the receiver power bus
-		await rx_pwr(true);
+		try {
+			// enable the receiver power bus
+			await rx_pwr(true);
 
-		await loadCorrectionTable(receiver.settings.correctionTable);
+			await loadCorrectionTable(receiver.settings.correctionTable);
 
-		// set some starting (or constant) receiver settings
-		const fs = receiver.sampleRate(2.56e6);
+			// set some starting (or constant) receiver settings
+			const fs = receiver.sampleRate(2.56e6);
 
-		// throw here if we don't get a number back
-		if (typeof fs === 'string') {
-			throw new Error(`[receiver-service] ${fs}`);
+			// throw here if we don't get a number back
+			if (typeof fs === 'string') {
+				throw new Error(`[receiver-service] ${fs}`);
+			}
+		} catch(err) {
+			// just re-throw for caller to handle
+			throw Error(err);
 		}
 			
 		this.logger.info(`[receiver-service] Sample rate => ${fs} Hz`);
