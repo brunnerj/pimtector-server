@@ -117,11 +117,6 @@ bleno.on('accept', function(clientAddress) {
 		receiverService.start();
 	} catch (err) {
 		logger.error(`[ble-server] Error starting services: ${err}`);
-		
-		// stop services and (re)start advertising
-		batteryService.stop(); 
-		receiverService.stop();
-		advertise();
 	}
 });
 
