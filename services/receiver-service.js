@@ -9,23 +9,27 @@ const receiver = require('./receiver');
 const Gpio = require('onoff').Gpio;
 const GPIO_RX_EN = 13; // Enable/disable the receiver (RX) USB power bus (GPIO PIN33 == GPIO13)
 const rcvr_en = new Gpio(GPIO_RX_EN, 'out');
-
-function sleep(ms) {
-	return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 const RX_PWR_WAIT = 5000;
+
+let rx_power_on = false;
 async function rx_pwr(enable) { 
+
+	if (enable && rx_power_on || !enable && !rx_power_on) return;
+
 	rcvr_en.writeSync(enable ? Gpio.HIGH : Gpio.LOW);
 
 	// wait a bit after power up
-	if (enable) {
-
-		console.log('Waiting for Rx power up...');
+	if (enable && !rx_power_on) {
 		await sleep(RX_PWR_WAIT);
-		console.log('...done waiting for Rx power up.');
 	}
+	rx_power_on = enabled;
 }
+
+
+function loadCorrectionTable(table) {
+	// TODO: Load corrections from file
+}
+
 
 const RECEIVER_SERVICE_UUID				= '00010000-8d54-11e9-b475-0800200c9a66';
 
@@ -39,8 +43,8 @@ function u16BufToOctet(u16Buf) {
 	return `<0x ${str.slice(0,2)} ${str.slice(2)}>`;
 } 
 
-async function loadCorrectionTable(table) {
-	// TODO: Load corrections from file
+function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 class ReceiverInfoCharacteristic extends bleno.Characteristic {
@@ -69,29 +73,29 @@ class ReceiverInfoCharacteristic extends bleno.Characteristic {
 		});
 
 		this.logger = logger;
-	}
+	}	
 
 	onReadRequest(offset, callback) {
-		try {
 			
-			const info = receiver.info(); // { vendor, product, serial }
+		rx_pwr(true)
+			.then(() => {
+				const info = receiver.info(); // { vendor, product, serial }
 
-			if (typeof info === 'string') {
-				this.logger.error(`[receiver-service][ReceiverInfoCharacteristic.onReadRequest] ${info}`);
-				callback(this.RESULT_SUCCESS, Buffer.from('ERROR ' + '100: Receiver failure', 'utf8'));
-				return;
-			}
-
-			const infoStr = `${info.vendor},${info.product},${info.serial}`;
-
-			this.logger.info(`[receiver-service] Returning receiver information: '${infoStr}'`);
-			callback(this.RESULT_SUCCESS, Buffer.from(infoStr, 'utf8'));
-
-		} catch (err) {
-
-			this.logger.error(`[receiver-service][ReceiverInfoCharacteristic.onReadRequest] ${err}`);
-			callback(this.RESULT_UNLIKELY_ERROR);
-		}
+				if (typeof info === 'string') {
+					this.logger.error(`[receiver-service][ReceiverInfoCharacteristic.onReadRequest] ${info}`);
+					callback(this.RESULT_SUCCESS, Buffer.from('ERROR ' + '100: Receiver failure', 'utf8'));
+					return;
+				}
+	
+				const infoStr = `${info.vendor},${info.product},${info.serial}`;
+	
+				this.logger.info(`[receiver-service] Returning receiver information: '${infoStr}'`);
+				callback(this.RESULT_SUCCESS, Buffer.from(infoStr, 'utf8'));
+			})
+			.catch((err) => {
+				this.logger.error(`[receiver-service][ReceiverInfoCharacteristic.onReadRequest] ${err}`);
+				callback(this.RESULT_UNLIKELY_ERROR);
+			});
 	}
 
 }
@@ -269,12 +273,14 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 	}
 
 	init() {
+
+		loadCorrectionTable(receiver.settings.correctionTable);
+
 		// set some starting (or constant) receiver settings
 		const fs = receiver.sampleRate(2.56e6);
 
-		// Reject here if we don't get a number back
+		// Error here if we don't get a number back
 		if (typeof fs === 'string') {
-			this.logger.error(`[receiver-service] Error setting sample rate ${fs}`);
 			throw fs;
 		}
 			
@@ -307,27 +313,12 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 		this.logger.info('[receiver-service] Starting receiver service');
 
 		// enable the receiver power bus
-		this.logger.info('[receiver-service] Enabling receiver power.');
-
 		rx_pwr(true)
-			.then(() => {
-				this.logger.info('[receiver-service] Reciever power enabled.');
-
-				this.logger.info('[receiver-service] Loading corrections table.');
-				loadCorrectionTable(receiver.settings.correctionTable)
-					.then(() => {
-						this.logger.info('[receiver-service] Corrections table loaded.');
-						this.init();
-					})
-					.catch((err) => {
-						this.logger.error(`[receiver-service] Error loading corrections table ${err}`);
-						throw err;
-					});
-				})
-				.catch((err) => {
-					this.logger.error(`[receiver-service] Error powering up receiver ${err}`);
-					throw err;
-				});
+			.then(this.init)
+			.catch((err) => {
+				this.logger.error(`[receiver-service] Error initializing receiver ${err}`);
+				throw err;
+			});
 	}
 
 	stop() {
