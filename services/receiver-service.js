@@ -268,35 +268,13 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 		}
 	}
 
-	start() {
-		this.logger.info('[receiver-service] Starting receiver service');
-
-		// enable the receiver power bus
-		this.logger.info('[receiver-service] Enabling receiver power.');
-		
-		rx_pwr(true)
-			.then(() => {
-				this.logger.info('[receiver-service] Reciever power enabled.');
-				this.logger.info('[receiver-service] Loading corrections table.');
-				loadCorrectionTable(receiver.settings.correctionTable)
-					.then(() => {
-						this.logger.info('[receiver-service] Corrections table loaded.');
-					})
-					.catch((err) => {
-						this.logger.error(`[receiver-service] ${err}`);
-						throw err;
-					});
-			}).catch((err) => {
-				this.logger.error(`[receiver-service] ${err}`);
-				throw err;
-			});
-
+	init() {
 		// set some starting (or constant) receiver settings
 		const fs = receiver.sampleRate(2.56e6);
 
 		// Reject here if we don't get a number back
 		if (typeof fs === 'string') {
-			this.logger.error(`[receiver-service] ${fs}`);
+			this.logger.error(`[receiver-service] Error setting sample rate ${fs}`);
 			throw fs;
 		}
 			
@@ -323,6 +301,33 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 		
 		this.N = receiver.points();
 		this.logger.info(`[receiver-service] Number of points => ${this.N}`);
+	}
+
+	start() {
+		this.logger.info('[receiver-service] Starting receiver service');
+
+		// enable the receiver power bus
+		this.logger.info('[receiver-service] Enabling receiver power.');
+
+		rx_pwr(true)
+			.then(() => {
+				this.logger.info('[receiver-service] Reciever power enabled.');
+
+				this.logger.info('[receiver-service] Loading corrections table.');
+				loadCorrectionTable(receiver.settings.correctionTable)
+					.then(() => {
+						this.logger.info('[receiver-service] Corrections table loaded.');
+						this.init();
+					})
+					.catch((err) => {
+						this.logger.error(`[receiver-service] Error loading corrections table ${err}`);
+						throw err;
+					});
+				})
+				.catch((err) => {
+					this.logger.error(`[receiver-service] Error powering up receiver ${err}`);
+					throw err;
+				});
 	}
 
 	stop() {
