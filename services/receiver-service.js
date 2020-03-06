@@ -82,15 +82,17 @@ class ReceiverInfoCharacteristic extends bleno.Characteristic {
 				const info = receiver.info(); // { vendor, product, serial }
 
 				if (typeof info === 'string') {
-					this.logger.error(`[receiver-service][ReceiverInfoCharacteristic.onReadRequest] ${info}`);
+
+					this.logger.error(`[receiver-service] ${info}`);
 					callback(this.RESULT_SUCCESS, Buffer.from('ERROR ' + '100: Receiver failure', 'utf8'));
-					return;
+
+				} else {
+	
+					const infoStr = `${info.vendor},${info.product},${info.serial}`;
+		
+					this.logger.info(`[receiver-service] Receiver information: '${infoStr}'`);
+					callback(this.RESULT_SUCCESS, Buffer.from(infoStr, 'utf8'));
 				}
-	
-				const infoStr = `${info.vendor},${info.product},${info.serial}`;
-	
-				this.logger.info(`[receiver-service] Returning receiver information: '${infoStr}'`);
-				callback(this.RESULT_SUCCESS, Buffer.from(infoStr, 'utf8'));
 			})
 			.catch((err) => {
 				this.logger.error(`[receiver-service][ReceiverInfoCharacteristic.onReadRequest] ${err}`);
