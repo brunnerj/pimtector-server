@@ -81,7 +81,7 @@ const halt = () => {
 }
 
 // callback when standby button push detected
-const standbyDetector = (err) => {
+const standbyDetector = async (err) => {
 
 	if (err) {
 		logger.error(`[standby-monitor] Error calling standbyDetector: ${err}`);
