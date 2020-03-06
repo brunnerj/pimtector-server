@@ -319,7 +319,6 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 			.then(this.init)
 			.catch((err) => {
 				this.logger.error(`[receiver-service] Error starting receiver service ${err}`);
-				throw err;
 			});
 	}
 

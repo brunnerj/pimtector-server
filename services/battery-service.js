@@ -85,12 +85,10 @@ class BatteryLevelCharacteristic extends bleno.Characteristic {
 					})
 					.catch((err) => {
 						this.logger.error(`[battery-service] ${err}`);
-						throw err;
 					});
 			})
 			.catch((err) => {
 				this.logger.error(`[battery-service] ${err}`);
-				throw err;
 			});
 	}
 
