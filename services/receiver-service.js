@@ -22,7 +22,7 @@ async function rx_pwr(enable) {
 	if (enable && !rx_power_on) {
 		await sleep(RX_PWR_WAIT);
 	}
-	rx_power_on = enabled;
+	rx_power_on = enable;
 }
 
 
@@ -316,13 +316,13 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 		rx_pwr(true)
 			.then(this.init)
 			.catch((err) => {
-				this.logger.error(`[receiver-service] Error initializing receiver ${err}`);
+				this.logger.error(`[receiver-service] Error starting receiver service ${err}`);
 				throw err;
 			});
 	}
 
 	stop() {
-		this.logger.info('[receiver-service] Stopping receiver data characteristic');
+		this.logger.info('[receiver-service] Stopping receiver service');
 
 		if (this.handle) 
 			this.onUnsubscribe();
