@@ -92,6 +92,8 @@ const standbyDetector = (err) => {
 	if (button.readSync() === Gpio.HIGH)
 		return;
 
+	logger.info('[standby-monitor] standby signal detected');
+
 	// Else see how long the button is held
 	// and halt if it's held long enough
 	let start_ms = Date.now();
@@ -99,11 +101,17 @@ const standbyDetector = (err) => {
 
 	while (button.readSync() === Gpio.LOW && !halting) {
 
-		halting = (Date.now() - start_ms) > STANDBY_HOLD_TIME_ms;
+		// halt if LBO stays low for HOLD TIME, but
+		// only check it every few seconds
+		await sleep(100).then(() => { 
+			halting = (Date.now() - start_ms) > STANDBY_HOLD_TIME_ms;
+		});
 	}
 
 	if (halting) {
 		halt();
+	} else {
+		logger.info('[standby-monitor] standby reset');
 	}
 }
 
