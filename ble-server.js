@@ -48,6 +48,7 @@ logger.info(`[ble-server] starting BLE peripheral server...`);
 
 
 const advertise = () => {
+	logger.info('[ble-server] starting BLE advertising');
 	bleno.startAdvertising(SERVER_APP_NAME, [ 
 		receiverService.uuid, 
 		deviceInformationService.uuid, 
@@ -134,13 +135,9 @@ bleno.on('disconnect', (clientAddress) => {
 		logger.info(`[ble-server] ${clientAddress} disconnect`);
 	}
 
-	console.log('****** HERE I WILL STOP SERVICES!!!');
-
 	// stop battery and receiver service updates
 	batteryService.stop(); 
 	receiverService.stop();
-
-	console.log('****** HERE I SHOULD RESTART ADVERTISING!!!');
 
 	// start advertising BLE
 	advertise();
