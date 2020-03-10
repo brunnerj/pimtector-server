@@ -43,8 +43,12 @@ async function rx_enable(enable, logger) {
 		const end = (Date.now() - start)/1000;
 		logger.info(`rx_enable(${enable}) => slept for ${end.toFixed(1)} seconds`);
 
-		// set receiver configuration and reset the buffer
-		receiver.resetBuffer();
+		// reset buffer and set receiver configuration
+		const rb = receiver.resetBuffer();
+
+		if (typeof rb === 'string') {
+			throw rb;
+		}
 
 		const fs = receiver.sampleRate(SAMPLE_RATE_Hz);
 
@@ -66,7 +70,7 @@ async function rx_enable(enable, logger) {
 	rx_enabled = enable;
 }
 
-async function waitForRxEnabled() {
+async function waitForRxEnabled(logger) {
 
 	const start = Date.now();
 	const delay = 300;
