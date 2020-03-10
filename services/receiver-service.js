@@ -22,6 +22,7 @@ const GPIO_RX_EN = 13; // Enable/disable the receiver (RX) USB power bus (GPIO P
 const rcvr_en = new Gpio(GPIO_RX_EN, 'out');
 const RX_PWR_WAIT = 5000;
 
+let rx_enabled = false;
 async function rx_enable(enable, caller, logger) { 
 
 	logger.info(`${caller} => rx_enable(${enable})`);
@@ -34,11 +35,13 @@ async function rx_enable(enable, caller, logger) {
 	// parameters
 	if (enable) {
 
-		// raw sleep
-		await new Promise(resolve => setTimeout(resolve, RX_PWR_WAIT));
+		const start = Date.now();
+		logger.info(`${caller} => rx_enable(${enable}), sleeping for a bit...`);
+		await sleep(RX_PWR_WAIT);
 
 		loadCorrectionTable(receiver.settings.correctionTable);
-		logger.info(`${caller} => rx_enable(${enable}), done loading correction table`);
+		const end = (Date.now() - start)/1000;
+		logger.info(`${caller} => rx_enable(${enable}), done loading correction table (slept for ${end.toFixed(1)})`);
 
 		// set some starting (or constant) receiver settings
 		let fs = receiver.sampleRate();
@@ -61,15 +64,35 @@ async function rx_enable(enable, caller, logger) {
 		receiver.gain(42);
 		receiver.offsetTuning(1);
 		receiver.frequency(CENTER_FREQ_Hz);
-
 	}
+
+	rx_enabled = enable;
 }
 
+async function waitForRxEnabled() {
+
+	const start = Date.now();
+	const delay = 300;
+	const timeout = 6000;
+
+	let timedOut = false;
+
+	while (!rx_enabled || !timedOut) {
+
+		await sleep(delay);
+		timedOut = Date.now() - start >= timeout;
+	}
+
+	return !timedOut;
+}
 
 function loadCorrectionTable(table) {
 	// TODO: Load corrections from file
 }
 
+function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 const RECEIVER_SERVICE_UUID				= '00010000-8d54-11e9-b475-0800200c9a66';
 
@@ -112,32 +135,31 @@ class ReceiverInfoCharacteristic extends bleno.Characteristic {
 	}	
 
 	onReadRequest(offset, callback) {
-			
-		rx_enable(true, 'InfoCharacteristic', this.logger)
-			.then(() => {
 
-				const info = receiver.info(); // { vendor, product, serial }
+		waitForRxEnabled()
+			.then(enabled => {
+				if (enabled) {
+					const info = receiver.info(); // { vendor, product, serial }
 
-				if (typeof info === 'string') {
+					if (typeof info === 'string') {
+						throw new Error(info);
 
-					this.logger.error(`[receiver-service] ${info}`);
-					callback(this.RESULT_SUCCESS, Buffer.from(`ERROR ${info}`, 'utf8'));
-
-				} else {
-	
-					const infoStr = `${info.vendor},${info.product},${info.serial}`;
+					} else {
 		
-					this.logger.info(`[receiver-service] Receiver information: '${infoStr}'`);
-					callback(this.RESULT_SUCCESS, Buffer.from(infoStr, 'utf8'));
+						const infoStr = `${info.vendor},${info.product},${info.serial}`;
+			
+						this.logger.info(`[receiver-service] Receiver information: '${infoStr}'`);
+						callback(this.RESULT_SUCCESS, Buffer.from(infoStr, 'utf8'));
+					}
+				} else {
+						throw new Error('Timed out retrieving receiver information');
 				}
 			})
 			.catch((err) => {
 				this.logger.error(`[receiver-service][ReceiverInfoCharacteristic] ${err}`);
-				
 				callback(this.RESULT_SUCCESS, Buffer.from(`ERROR ${err}`, 'utf8'));
-				
-				//callback(this.RESULT_UNLIKELY_ERROR);
 			});
+
 	}
 
 }
