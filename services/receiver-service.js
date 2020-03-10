@@ -22,9 +22,9 @@ const GPIO_RX_EN = 13; // Enable/disable the receiver (RX) USB power bus (GPIO P
 const rcvr_en = new Gpio(GPIO_RX_EN, 'out');
 const RX_PWR_WAIT = 5000;
 
-async function rx_enable(enable, caller) { 
+async function rx_enable(enable, caller, logger) { 
 
-	console.log(`${caller} => rx_enable(${enable})`);
+	logger.info(`${caller} => rx_enable(${enable})`);
 
 	// set GPIO_RX_EN on or off
 	rcvr_en.writeSync(enable ? Gpio.HIGH : Gpio.LOW);
@@ -38,16 +38,16 @@ async function rx_enable(enable, caller) {
 		await new Promise(resolve => setTimeout(resolve, RX_PWR_WAIT));
 
 		loadCorrectionTable(receiver.settings.correctionTable);
-		console.log(`${caller} => rx_enable(${enable}), done loading correction table`);
+		logger.info(`${caller} => rx_enable(${enable}), done loading correction table`);
 
 		// set some starting (or constant) receiver settings
 		let fs = receiver.sampleRate();
-		console.log(`${caller} => rx_enable(${enable}), read fs = ${fs}`);
+		logger.info(`${caller} => rx_enable(${enable}), read fs = ${fs}`);
 
 		if (fs !== SAMPLE_RATE_Hz) {
-			console.log(`${caller} => rx_enable(${enable}), setting fs => ${SAMPLE_RATE_Hz}`);
+			logger.info(`${caller} => rx_enable(${enable}), setting fs => ${SAMPLE_RATE_Hz}`);
 			fs = receiver.sampleRate(SAMPLE_RATE_Hz);
-			console.log(`${caller} => rx_enable(${enable}), got fs => ${fs}`);
+			logger.info(`${caller} => rx_enable(${enable}), got fs => ${fs}`);
 		}
 
 		// Error here if we don't get a number back
@@ -113,7 +113,7 @@ class ReceiverInfoCharacteristic extends bleno.Characteristic {
 
 	onReadRequest(offset, callback) {
 			
-		rx_enable(true)
+		rx_enable(true, 'InfoCharacteristic', this.logger)
 			.then(() => {
 
 				const info = receiver.info(); // { vendor, product, serial }
@@ -318,7 +318,7 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 		this.logger.info('[receiver-service] Starting receiver service');
 
 		// enable the receiver power bus
-		rx_enable(true)
+		rx_enable(true, 'DataCharacteristic', this.logger)
 			.catch((err) => {
 				// re-throw errors for callers to handle
 				throw err;
