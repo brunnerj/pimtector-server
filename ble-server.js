@@ -44,7 +44,7 @@ const receiverService = new ReceiverService(logger);
 
 const SERVER_APP_NAME = 'PIMtector';
 
-logger.info(`[ble-server] starting BLE peripheral server...`);
+logger.info(`[ble-server] starting BLE peripheral server`);
 
 
 const advertise = () => {

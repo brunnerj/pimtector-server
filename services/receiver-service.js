@@ -4,6 +4,13 @@ const bleno = require('@abandonware/bleno');
 
 const receiver = require('./receiver');
 
+// receiver settings (these don't require
+// receiver hardware I/O).
+receiver.settings.decimate = 16;
+receiver.settings.averages = 8;
+receiver.settings.chunkDiv = 1;
+receiver.settings.dspBlocks = 2;
+
 // use GPIO13 to enable/disable the receiver
 // USB power bus on user connect/disconnect
 const Gpio = require('onoff').Gpio;
@@ -12,16 +19,38 @@ const rcvr_en = new Gpio(GPIO_RX_EN, 'out');
 const RX_PWR_WAIT = 5000;
 
 let rx_power_on = false;
-async function rx_pwr(enable) { 
+async function rx_enable(enable) { 
 
 	if (enable && rx_power_on || !enable && !rx_power_on) return;
 
 	rcvr_en.writeSync(enable ? Gpio.HIGH : Gpio.LOW);
 
 	// wait a bit after power up
-	if (enable && !rx_power_on) {
+	// then set and check some Rx
+	// parameters
+	if (enable) {
+
 		await sleep(RX_PWR_WAIT);
+
+		loadCorrectionTable(receiver.settings.correctionTable);
+
+		// set some starting (or constant) receiver settings
+		const fs = receiver.sampleRate(2.56e6);
+
+		// Error here if we don't get a number back
+		if (typeof fs === 'string') {
+			throw fs;
+		}
+
+		// receiver hardware settings
+		receiver.gainMode(0);
+		receiver.agc(0);
+		receiver.gain(42);
+		receiver.offsetTuning(1);
+		receiver.frequency(725e6);
+
 	}
+
 	rx_power_on = enable;
 }
 
@@ -77,8 +106,9 @@ class ReceiverInfoCharacteristic extends bleno.Characteristic {
 
 	onReadRequest(offset, callback) {
 			
-		rx_pwr(true)
+		rx_enable(true)
 			.then(() => {
+
 				const info = receiver.info(); // { vendor, product, serial }
 
 				if (typeof info === 'string') {
@@ -96,7 +126,10 @@ class ReceiverInfoCharacteristic extends bleno.Characteristic {
 			})
 			.catch((err) => {
 				this.logger.error(`[receiver-service][ReceiverInfoCharacteristic.onReadRequest] ${err}`);
-				callback(this.RESULT_UNLIKELY_ERROR);
+				
+				callback(this.RESULT_SUCCESS, Buffer.from(`ERROR ${err}`, 'utf8'));
+				
+				//callback(this.RESULT_UNLIKELY_ERROR);
 			});
 	}
 
@@ -278,45 +311,10 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 		this.logger.info('[receiver-service] Starting receiver service');
 
 		// enable the receiver power bus
-		rx_pwr(true)
-			.then(() => {
-
-				loadCorrectionTable(receiver.settings.correctionTable);
-
-				// set some starting (or constant) receiver settings
-				const fs = receiver.sampleRate(2.56e6);
-
-				// Error here if we don't get a number back
-				if (typeof fs === 'string') {
-					throw fs;
-				}
-					
-				this.logger.info(`[receiver-service] Sample rate => ${fs} Hz`);
-
-				// receiver hardware settings
-				receiver.gainMode(0);
-				receiver.agc(0);
-				receiver.gain(42);
-				receiver.offsetTuning(1);
-
-				// 'soft' settings
-				receiver.settings.decimate = 16;
-				receiver.settings.averages = 8;
-				receiver.settings.chunkDiv = 1;
-				receiver.settings.dspBlocks = 2;
-
-				// set initial center frequency and read span and points
-				this.frequency = receiver.frequency(725e6);
-				this.logger.info(`[receiver-service] Center frequency => ${this.frequency} Hz`);
-				
-				this.span = receiver.span();
-				this.logger.info(`[receiver-service] Frequency span => ${this.span} Hz`);
-				
-				this.N = receiver.points();
-				this.logger.info(`[receiver-service] Number of points => ${this.N}`);
-			})
+		rx_enable(true)
 			.catch((err) => {
-				this.logger.error(`[receiver-service] Error starting receiver service ${err}`);
+				//this.logger.error(`[receiver-service] Error starting receiver service ${err}`);
+				throw err;
 			});
 	}
 
@@ -330,7 +328,7 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 		receiver.settings.correctionTable = [];
 
 		// disable receiver power bus
-		rx_pwr(false);
+		rx_enable(false);
 	}
 
 	onSubscribe(maxValueSize, updateValueCallback) {
