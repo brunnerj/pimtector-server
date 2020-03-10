@@ -78,7 +78,6 @@ async function waitForRxEnabled(logger) {
 
 	let timedOut = false;
 
-
 	while (!rx_enabled || !timedOut) {
 
 		await sleep(delay);
@@ -88,10 +87,6 @@ async function waitForRxEnabled(logger) {
 
 		timedOut = elapsed >= timeout;
 	}
-
-	
-
-	return rx_enabled;
 }
 
 function loadCorrectionTable(table) {
@@ -145,8 +140,8 @@ class ReceiverInfoCharacteristic extends bleno.Characteristic {
 	onReadRequest(offset, callback) {
 
 		waitForRxEnabled(this.logger)
-			.then(enabled => {
-				if (enabled) {
+			.then(() => {
+				if (rx_enabled) {
 					const info = receiver.info(); // { vendor, product, serial }
 
 					if (typeof info === 'string') {
@@ -347,6 +342,8 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 	start() {
 		this.logger.info('[receiver-service] Starting receiver service');
 
+		rx_enabled = false;
+		
 		// enable the receiver power bus
 		rx_enable(true, this.logger)
 			.catch((err) => {
