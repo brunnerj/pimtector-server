@@ -20,12 +20,12 @@ const CENTER_FREQ_Hz = 725e6;
 const Gpio = require('onoff').Gpio;
 const GPIO_RX_EN = 13; // Enable/disable the receiver (RX) USB power bus (GPIO PIN33 == GPIO13)
 const rcvr_en = new Gpio(GPIO_RX_EN, 'out');
-const RX_PWR_WAIT = 3000;
+const RX_PWR_WAIT = 5000;
 
 let rx_enabled = false;
-async function rx_enable(enable, caller, logger) { 
+async function rx_enable(enable, logger) { 
 
-	logger.info(`${caller} => rx_enable(${enable})`);
+	logger.info(`rx_enable(${enable})`);
 
 	// set GPIO_RX_EN on or off
 	rcvr_en.writeSync(enable ? Gpio.HIGH : Gpio.LOW);
@@ -36,24 +36,17 @@ async function rx_enable(enable, caller, logger) {
 	if (enable) {
 
 		const start = Date.now();
-		logger.info(`${caller} => rx_enable(${enable}), sleeping for a bit...`);
+		logger.info(`rx_enable(${enable}) => sleeping for a bit...`);
 		await sleep(RX_PWR_WAIT);
 
 		loadCorrectionTable(receiver.settings.correctionTable);
 		const end = (Date.now() - start)/1000;
-		logger.info(`${caller} => rx_enable(${enable}), slept for ${end.toFixed(1)} seconds`);
+		logger.info(`rx_enable(${enable}) => slept for ${end.toFixed(1)} seconds`);
 
 		// set receiver configuration and reset the buffer
 		receiver.resetBuffer();
 
-		let fs = receiver.sampleRate();
-		logger.info(`${caller} => rx_enable(${enable}), read fs = ${fs}`);
-
-		if (fs !== SAMPLE_RATE_Hz) {
-			logger.info(`${caller} => rx_enable(${enable}), setting fs => ${SAMPLE_RATE_Hz}`);
-			fs = receiver.sampleRate(SAMPLE_RATE_Hz);
-			logger.info(`${caller} => rx_enable(${enable}), set fs => ${fs}`);
-		}
+		const fs = receiver.sampleRate(SAMPLE_RATE_Hz);
 
 		// Error here if we don't get a number back
 		if (typeof fs === 'string') {
@@ -61,13 +54,13 @@ async function rx_enable(enable, caller, logger) {
 		}
 
 		// receiver hardware settings
+		receiver.frequency(CENTER_FREQ_Hz);
 		receiver.gainMode(0);
 		receiver.agc(0);
 		receiver.gain(42);
 		receiver.offsetTuning(1);
-		receiver.frequency(CENTER_FREQ_Hz);
 
-		logger.info(`${caller} => rx_enable(${enable}), going to set rx_enabled!`);
+		logger.info(`rx_enable(${enable}) => setting rx_enabled`);
 	}
 
 	rx_enabled = enable;
@@ -344,7 +337,7 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 		this.logger.info('[receiver-service] Starting receiver service');
 
 		// enable the receiver power bus
-		rx_enable(true, 'DataCharacteristic', this.logger)
+		rx_enable(true, this.logger)
 			.catch((err) => {
 				// re-throw errors for callers to handle
 				throw err;
@@ -361,7 +354,7 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 		receiver.settings.correctionTable = [];
 
 		// disable receiver power bus
-		rx_enable(false, 'DataCharacteristic', this.logger)
+		rx_enable(false, this.logger)
 			.catch((err) => {
 				this.logger.error(`[receiver-service] Error stopping receiver service ${err}`);
 			})
