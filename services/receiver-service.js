@@ -11,6 +11,10 @@ receiver.settings.averages = 8;
 receiver.settings.chunkDiv = 1;
 receiver.settings.dspBlocks = 2;
 
+// receiver hardware settings
+const SAMPLE_RATE_Hz = 2.56e6;
+const CENTER_FREQ_Hz = 725e6;
+
 // use GPIO13 to enable/disable the receiver
 // USB power bus on user connect/disconnect
 const Gpio = require('onoff').Gpio;
@@ -33,7 +37,11 @@ async function rx_enable(enable) {
 		loadCorrectionTable(receiver.settings.correctionTable);
 
 		// set some starting (or constant) receiver settings
-		const fs = receiver.sampleRate(2.56e6);
+		let fs = receiver.sampleRate();
+
+		if (fs !== SAMPLE_RATE_Hz) {
+			fs = receiver.sampleRate(SAMPLE_RATE_Hz);
+		}
 
 		// Error here if we don't get a number back
 		if (typeof fs === 'string') {
@@ -45,7 +53,7 @@ async function rx_enable(enable) {
 		receiver.agc(0);
 		receiver.gain(42);
 		receiver.offsetTuning(1);
-		receiver.frequency(725e6);
+		receiver.frequency(CENTER_FREQ_Hz);
 
 	}
 }
