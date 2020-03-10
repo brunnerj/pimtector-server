@@ -22,7 +22,9 @@ const GPIO_RX_EN = 13; // Enable/disable the receiver (RX) USB power bus (GPIO P
 const rcvr_en = new Gpio(GPIO_RX_EN, 'out');
 const RX_PWR_WAIT = 5000;
 
-async function rx_enable(enable) { 
+async function rx_enable(enable, caller) { 
+
+	console.log(`${caller} => rx_enable(${enable})`);
 
 	// set GPIO_RX_EN on or off
 	rcvr_en.writeSync(enable ? Gpio.HIGH : Gpio.LOW);
@@ -32,15 +34,20 @@ async function rx_enable(enable) {
 	// parameters
 	if (enable) {
 
-		await sleep(RX_PWR_WAIT);
+		// raw sleep
+		await new Promise(resolve => setTimeout(resolve, RX_PWR_WAIT));
 
 		loadCorrectionTable(receiver.settings.correctionTable);
+		console.log(`${caller} => rx_enable(${enable}), done loading correction table`);
 
 		// set some starting (or constant) receiver settings
 		let fs = receiver.sampleRate();
+		console.log(`${caller} => rx_enable(${enable}), read fs = ${fs}`);
 
 		if (fs !== SAMPLE_RATE_Hz) {
+			console.log(`${caller} => rx_enable(${enable}), setting fs => ${SAMPLE_RATE_Hz}`);
 			fs = receiver.sampleRate(SAMPLE_RATE_Hz);
+			console.log(`${caller} => rx_enable(${enable}), got fs => ${fs}`);
 		}
 
 		// Error here if we don't get a number back
@@ -75,10 +82,6 @@ function u16BufToOctet(u16Buf) {
 	const str = u16Buf.toString('hex');
 	return `<0x ${str.slice(0,2)} ${str.slice(2)}>`;
 } 
-
-function sleep(ms) {
-	return new Promise(resolve => setTimeout(resolve, ms));
-}
 
 class ReceiverInfoCharacteristic extends bleno.Characteristic {
 	constructor(logger) {
