@@ -41,7 +41,7 @@ async function rx_enable(enable, caller, logger) {
 
 		loadCorrectionTable(receiver.settings.correctionTable);
 		const end = (Date.now() - start)/1000;
-		logger.info(`${caller} => rx_enable(${enable}), done loading correction table (slept for ${end.toFixed(1)})`);
+		logger.info(`${caller} => rx_enable(${enable}), slept for ${end.toFixed(1)} seconds`);
 
 		// set some starting (or constant) receiver settings
 		let fs = receiver.sampleRate();
@@ -64,6 +64,8 @@ async function rx_enable(enable, caller, logger) {
 		receiver.gain(42);
 		receiver.offsetTuning(1);
 		receiver.frequency(CENTER_FREQ_Hz);
+
+		logger.info(`${caller} => rx_enable(${enable}), going to set rx_enabled!`);
 	}
 
 	rx_enabled = enable;
@@ -83,7 +85,7 @@ async function waitForRxEnabled() {
 		timedOut = Date.now() - start >= timeout;
 	}
 
-	return !timedOut;
+	return rx_enabled;
 }
 
 function loadCorrectionTable(table) {
