@@ -78,7 +78,7 @@ async function waitForRxEnabled(logger) {
 
 	let timedOut = false;
 
-	while (!rx_enabled || !timedOut) {
+	while (!rx_enabled && !timedOut) {
 
 		await sleep(delay);
 		const elapsed = Date.now() - start;
@@ -343,7 +343,7 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 		this.logger.info('[receiver-service] Starting receiver service');
 
 		rx_enabled = false;
-		
+
 		// enable the receiver power bus
 		rx_enable(true, this.logger)
 			.catch((err) => {
