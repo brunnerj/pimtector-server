@@ -20,12 +20,16 @@ const CENTER_FREQ_Hz = 725e6;
 const Gpio = require('onoff').Gpio;
 const GPIO_RX_EN = 13; // Enable/disable the receiver (RX) USB power bus (GPIO PIN33 == GPIO13)
 const rcvr_en = new Gpio(GPIO_RX_EN, 'out');
-const RX_PWR_WAIT = 5000;
+const RX_PWR_WAIT = 3000;
 
 let rx_enabled = false;
 async function rx_enable(enable, logger) { 
 
 	logger.info(`rx_enable(${enable})`);
+
+	if (!enable) {
+		receiver.close();
+	}
 
 	// set GPIO_RX_EN on or off
 	rcvr_en.writeSync(enable ? Gpio.HIGH : Gpio.LOW);
@@ -39,11 +43,14 @@ async function rx_enable(enable, logger) {
 		logger.info(`rx_enable(${enable}) => sleeping for a bit...`);
 		await sleep(RX_PWR_WAIT);
 
+		receiver.open();
+
 		loadCorrectionTable(receiver.settings.correctionTable);
 		const end = (Date.now() - start)/1000;
 		logger.info(`rx_enable(${enable}) => slept for ${end.toFixed(1)} seconds`);
 
-		// reset buffer and set receiver configuration
+
+		// reset buffer (resets device)
 		const rb = receiver.resetBuffer();
 
 		if (typeof rb === 'string') {
@@ -74,7 +81,7 @@ async function waitForRxEnabled(logger) {
 
 	const start = Date.now();
 	const delay = 250;
-	const timeout = 10000;
+	const timeout = 20000;
 
 	let timedOut = false;
 

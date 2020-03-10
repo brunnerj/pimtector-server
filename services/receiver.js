@@ -110,6 +110,15 @@ function openDevice() {
 	return _device;
 }
 
+
+function closeDevice() {
+	
+	if (!_device) return;
+
+	rtlsdr.close(_device); // ignore error
+	_device = null;
+}
+
 // Get device vendor, product, and serial number information.
 // Returns object with informational strings if device is present
 // or empty strings if no device present. If multiple devices are
@@ -185,6 +194,7 @@ function agc(enable) {
 
 // Reset device internal buffer
 function resetBuffer() {
+
 	const dev = openDevice();
 	if (typeof dev === 'string') return dev;
 
@@ -504,6 +514,9 @@ function stopData() {
 module.exports = {
 	// Settings are read/write
 	settings: settings,
+
+	open: openDevice,
+	close: closeDevice,
 
 	// READ-ONLY
 	info: info,
