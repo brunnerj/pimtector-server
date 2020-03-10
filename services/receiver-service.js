@@ -73,16 +73,23 @@ async function rx_enable(enable, logger) {
 async function waitForRxEnabled(logger) {
 
 	const start = Date.now();
-	const delay = 300;
+	const delay = 250;
 	const timeout = 10000;
 
 	let timedOut = false;
 
+
 	while (!rx_enabled || !timedOut) {
 
 		await sleep(delay);
-		timedOut = Date.now() - start >= timeout;
+		const elapsed = Date.now() - start;
+
+		logger.info(`waitForRxEnabled() => ${(elapsed/1000).toFixed(2)} seconds`);
+
+		timedOut = elapsed >= timeout;
 	}
+
+	
 
 	return rx_enabled;
 }
@@ -137,7 +144,7 @@ class ReceiverInfoCharacteristic extends bleno.Characteristic {
 
 	onReadRequest(offset, callback) {
 
-		waitForRxEnabled()
+		waitForRxEnabled(this.logger)
 			.then(enabled => {
 				if (enabled) {
 					const info = receiver.info(); // { vendor, product, serial }
