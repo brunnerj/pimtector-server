@@ -335,7 +335,7 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 		receiver.settings.correctionTable = [];
 
 		// disable receiver power bus
-		rx_enable(false)
+		rx_enable(false, 'DataCharacteristic', this.logger)
 			.catch((err) => {
 				this.logger.error(`[receiver-service] Error stopping receiver service ${err}`);
 			})
