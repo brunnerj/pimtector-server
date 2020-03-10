@@ -18,11 +18,9 @@ const GPIO_RX_EN = 13; // Enable/disable the receiver (RX) USB power bus (GPIO P
 const rcvr_en = new Gpio(GPIO_RX_EN, 'out');
 const RX_PWR_WAIT = 5000;
 
-let rx_power_on = false;
 async function rx_enable(enable) { 
 
-	if (enable && rx_power_on || !enable && !rx_power_on) return;
-
+	// set GPIO_RX_EN on or off
 	rcvr_en.writeSync(enable ? Gpio.HIGH : Gpio.LOW);
 
 	// wait a bit after power up
@@ -50,8 +48,6 @@ async function rx_enable(enable) {
 		receiver.frequency(725e6);
 
 	}
-
-	rx_power_on = enable;
 }
 
 
@@ -114,7 +110,7 @@ class ReceiverInfoCharacteristic extends bleno.Characteristic {
 				if (typeof info === 'string') {
 
 					this.logger.error(`[receiver-service] ${info}`);
-					callback(this.RESULT_SUCCESS, Buffer.from('ERROR ' + '100: Receiver failure', 'utf8'));
+					callback(this.RESULT_SUCCESS, Buffer.from(`ERROR ${info}`, 'utf8'));
 
 				} else {
 	
@@ -125,7 +121,7 @@ class ReceiverInfoCharacteristic extends bleno.Characteristic {
 				}
 			})
 			.catch((err) => {
-				this.logger.error(`[receiver-service][ReceiverInfoCharacteristic.onReadRequest] ${err}`);
+				this.logger.error(`[receiver-service][ReceiverInfoCharacteristic] ${err}`);
 				
 				callback(this.RESULT_SUCCESS, Buffer.from(`ERROR ${err}`, 'utf8'));
 				
@@ -313,7 +309,7 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 		// enable the receiver power bus
 		rx_enable(true)
 			.catch((err) => {
-				//this.logger.error(`[receiver-service] Error starting receiver service ${err}`);
+				// re-throw errors for callers to handle
 				throw err;
 			});
 	}
@@ -328,7 +324,10 @@ class ReceiverDataCharacteristic extends bleno.Characteristic {
 		receiver.settings.correctionTable = [];
 
 		// disable receiver power bus
-		rx_enable(false);
+		rx_enable(false)
+			.catch((err) => {
+				this.logger.error(`[receiver-service] Error stopping receiver service ${err}`);
+			})
 	}
 
 	onSubscribe(maxValueSize, updateValueCallback) {
