@@ -50,7 +50,7 @@ async function rx_enable(enable, caller, logger) {
 		if (fs !== SAMPLE_RATE_Hz) {
 			logger.info(`${caller} => rx_enable(${enable}), setting fs => ${SAMPLE_RATE_Hz}`);
 			fs = receiver.sampleRate(SAMPLE_RATE_Hz);
-			logger.info(`${caller} => rx_enable(${enable}), got fs => ${fs}`);
+			logger.info(`${caller} => rx_enable(${enable}), set fs => ${fs}`);
 		}
 
 		// Error here if we don't get a number back
@@ -73,7 +73,7 @@ async function waitForRxEnabled() {
 
 	const start = Date.now();
 	const delay = 300;
-	const timeout = 6000;
+	const timeout = 10000;
 
 	let timedOut = false;
 
@@ -157,7 +157,7 @@ class ReceiverInfoCharacteristic extends bleno.Characteristic {
 			})
 			.catch((err) => {
 				this.logger.error(`[receiver-service][ReceiverInfoCharacteristic] ${err}`);
-				callback(this.RESULT_SUCCESS, Buffer.from(`ERROR ${err}`, 'utf8'));
+				callback(this.RESULT_SUCCESS, Buffer.from(`${err}`, 'utf8'));
 			});
 
 	}
